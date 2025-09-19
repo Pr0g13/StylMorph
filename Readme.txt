@@ -1,14 +1,14 @@
-# STYLMORPH – 3D Virtual Try-On Platform
+ STYLMORPH – 3D Virtual Try-On Platform
 
-📝 Project Overview
+Project Overview
 
 STYLMORPH is a next-generation 3D virtual try-on platform designed to revolutionize the online fashion shopping experience. It allows users to generate realistic 3D avatars of themselves by entering their body measurements such as height, weight, and body shape. These avatars act as digital twins, enabling users to virtually try on clothing items sourced from various e-commerce platforms. By simply pasting a product link, the garment is accurately mapped onto the user’s 3D model, providing a highly personalized and immersive shopping experience. Unlike traditional e-commerce platforms that rely on static 2D images or generic avatars, STYLMORPH delivers true-to-body visualization. This bridges the gap between digital browsing and real-world fitting, offering customers greater confidence before making a purchase.
 
-⚠️ Problem in Current Systems
+ Problem in Current Systems
 
 Online fashion retail faces a persistent issue: customers are often unable to see how a product will actually look and fit on their own body. As a result, many users experience confusion and dissatisfaction when clothing does not meet expectations. High return rates add to operational costs for businesses, while customer trust declines, reducing loyalty and repeat sales. These issues make online shopping less efficient, more frustrating, and costly for both customers and retailers.
 
-💡 Our Solution – STYLMORPH
+ Our Solution – STYLMORPH
 
 STYLMORPH directly addresses these challenges by combining 3D modeling, artificial intelligence, and e-commerce integration. The platform allows users to create highly personalized 3D avatars unique to their body measurements. It supports realistic try-on features where clothes from product links are virtually fitted onto the avatar, making the shopping process both engaging and accurate. Artificial intelligence further enhances the experience by recommending matching outfits and suitable color combinations, while skin-tone matching ensures that users can visualize how garments complement their complexion. Being available as both a web and mobile application, the platform ensures accessibility and convenience across different devices.
 
