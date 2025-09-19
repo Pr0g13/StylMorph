@@ -1,4 +1,4 @@
-###STYLMORPH – 3D Virtual Try-On Platform
+# STYLMORPH – 3D Virtual Try-On Platform
 
 📝 Project Overview
 
