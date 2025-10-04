@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StylMorph — Setup (MongoDB) & File Structure</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#7dd3fc; --muted:#94a3b8; --mono:#e6eef6;
+    }
+    body{font-family:Inter,Segoe UI,Roboto,monospace;background:linear-gradient(180deg,#071126 0%, #081225 100%);color:var(--mono);margin:0;padding:24px;}
+    .container{max-width:1100px;margin:0 auto;}
+    h1{color:var(--accent);margin:0 0 8px;font-size:28px;}
+    p.lead{color:var(--muted);margin:0 0 20px;}
+    .card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.03);padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 6px 18px rgba(1,6,16,0.6);}
+    .tree{white-space:pre;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;color:#dbeafe; background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.007)); padding:12px; border-radius:6px; overflow:auto;}
+    .file-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .file-title h3{margin:0;color:#a5f3fc;font-size:14px;}
+    .code{background:#061124;padding:12px;border-radius:6px;overflow:auto;border:1px solid rgba(255,255,255,0.02);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;font-size:13px;color:#e6eef6;line-height:1.45; margin-top:8px;}
+    .controls{display:flex;gap:8px;}
+    button.copy-btn{background:linear-gradient(90deg,#0ea5e9,#60a5fa);border:none;color:#042027;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:600;}
+    code.hl{white-space:pre-wrap; display:block;}
+    details{margin-bottom:10px;}
+    summary{cursor:pointer;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.01);color:var(--muted);}
+    footer{color:var(--muted);font-size:13px;margin-top:18px;text-align:center;}
+    .small{font-size:13px;color:var(--muted);}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>StylMorph — Setup (MongoDB) & File Structure</h1>
+    <p class="lead">This single HTML includes the recommended file structure, backend starter code (Express + Mongoose), frontend API snippets, environment examples and Docker Compose. Use the copy buttons to paste files directly into your project.</p>
+
+    <div class="card">
+      <div class="file-title">
+        <h3>Project File Structure</h3>
+        <div class="small">Monorepo (no mobile app)</div>
+      </div>
+      <pre class="tree">
+stylmorph/
+│── backend/                     # Node.js + Express + MongoDB
+│   ├── src/
+│   │   ├── config/              # DB connection, environment configs
+│   │   │   └── db.js
+│   │   ├── controllers/         # Business logic
+│   │   │   └── auth.js
+│   │   ├── models/              # Mongoose models
+│   │   │   └── User.js
+│   │   ├── routes/              # Express routes
+│   │   │   └── auth.js
+│   │   ├── middleware/          # JWT auth, validation
+│   │   ├── app.js               # Express app
+│   │   └── server.js            # Entry point
+│   ├── package.json
+│   └── .env
+│
+│── frontend/                    # React.js web app
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/              # Images, logos
+│   │   ├── components/          # Reusable UI components
+│   │   ├── pages/               # Login, Signup, Dashboard
+│   │   ├── services/            # API calls
+│   │   ├── context/             # Auth context
+│   │   └── App.js
+│   ├── package.json
+│   └── .env
+│
+│── docs/                        # Documentation
+│── scripts/                     # Deployment scripts
+│── docker-compose.yml           # Optional: MongoDB + Backend
+│── README.md
+      </pre>
+    </div>
+
+    <!-- Backend files -->
+    <div class="card">
+      <div class="file-title">
+        <h3>backend/src/config/db.js</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="dbjs">Copy</button>
+        </div>
+      </div>
+      <pre id="dbjs" class="code"><code class="hl">// src/config/db.js
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("✅ MongoDB connected");
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;
+</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="file-title">
+        <h3>backend/src/models/User.js</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="userjs">Copy</button>
+        </div>
+      </div>
+      <pre id="userjs" class="code"><code class="hl">// src/models/User.js
+const mongoose = require("mongoose");
+
+const UserSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true, trim: true },
+  email:    { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Index for fast lookups (ensure in DB start/migrations)
+UserSchema.index({ email: 1 }, { unique: true });
+
+module.exports = mongoose.model("User", UserSchema);
+</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="file-title">
+        <h3>backend/src/controllers/auth.js</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="authcontroller">Copy</button>
+        </div>
+      </div>
+      <pre id="authcontroller" class="code"><code class="hl">// src/controllers/auth.js
+const User = require("../models/User");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+exports.signup = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    // basic validation
+    if (!username || !email || !password) {
+      return res.status(400).json({ msg: "Please provide username, email and password" });
+    }
+
+    let existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ msg: "User already exists" });
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const user = new User({ username, email, password: hashed });
+    await user.save();
+
+    res.status(201).json({ msg: "✅ User registered successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // basic validation
+    if (!email || !password) {
+      return res.status(400).json({ msg: "Please provide email and password" });
+    }
+
+    let user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ msg: "Invalid credentials" });
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ msg: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.json({
+      token,
+      user: { id: user._id, username: user.username, email: user.email }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="file-title">
+        <h3>backend/src/routes/auth.js</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="authroute">Copy</button>
+        </div>
+      </div>
+      <pre id="authroute" class="code"><code class="hl">// src/routes/auth.js
+const express = require("express");
+const { signup, login } = require("../controllers/auth");
+const router = express.Router();
+
+router.post("/signup", signup);
+router.post("/login", login);
+
+module.exports = router;
+</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="file-title">
+        <h3>backend/src/app.js</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="appjs">Copy</button>
+        </div>
+      </div>
+      <pre id="appjs" class="code"><code class="hl">// src/app.js
+const express = require("express");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const connectDB = require("./config/db");
+
+const authRoutes = require("./routes/auth");
+
+const app = express();
+connectDB();
+
+app.use(cors());
+app.use(bodyParser.json());
+
+app.use("/auth", authRoutes);
+
+// optional health check
+app.get("/", (req, res) => res.send({ ok: true, message: "StylMorph API" }));
+
+module.exports = app;
+</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="file-title">
+        <h3>backend/src/server.js</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="serverjs">Copy</button>
+        </div>
+      </div>
+      <pre id="serverjs" class="code"><code class="hl">// src/server.js
+require("dotenv").config();
+const app = require("./app");
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="file-title">
+        <h3>backend/.env (example)</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="envbackend">Copy</button>
+        </div>
+      </div>
+      <pre id="envbackend" class="code"><code class="hl">MONGO_URI=mongodb://localhost:27017/stylmorph
+JWT_SECRET=yourSecretKey
+PORT=5000
+</code></pre>
+    </div>
+
+    <!-- Frontend pieces -->
+    <div class="card">
+      <div class="file-title">
+        <h3>frontend/src/services/api.js</h3>
+        <div class="controls">
+          <button class="copy-btn" data-target="frontendapi">Copy</button>
+        </div>
+      </div>
+      <pre id="frontendapi" class="code"><code class="hl">// frontend/src/services/api.js
+const API_URL = "http://localhost:5000/auth";
+
+export const login = async (email, password) => {
+  const res = await fetch(`${API_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return res.json();
+};
+
+export const signup = async (username, email, password) => {
+  const res = await fetch(`${API_URL}/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, email, password }),
+  });
+  return res.json();
+};
+</code></pre>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>Optional: Docker Compose (MongoDB + Backend)</summary>
+        <div class="file-title" style="margin-top:8px;">
+          <h3>docker-compose.yml</h3>
+          <div class="controls">
+            <button class="copy-btn" data-target="dockercompose">Copy</button>
+          </div>
+        </div>
+        <pre id="dockercompose" class="code"><code class="hl">version: "3.8"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/stylmorph
+      - JWT_SECRET=yourSecretKey
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6.0
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+</code></pre>
+      </details>
+    </div>
+
+    <div class="card">
+      <h3>Quick Setup Commands</h3>
+      <pre class="code">// from project root
+mkdir stylmorph
+cd stylmorph
+
+// setup backend
+mkdir backend && cd backend
+npm init -y
+npm install express mongoose dotenv cors body-parser bcrypt jsonwebtoken
+npm install --save-dev nodemon
+
+// add package.json script:
+"scripts": {
+  "dev": "nodemon src/server.js"
+}
+
+// create src/ and place files shown above
+</pre>
+    </div>
+
+    <footer>
+      <div class="small">Tip: Save this page as <strong>stylmorph_setup.html</strong> so you can re-open the full setup anytime. <br/>Want me to convert this into a downloadable ZIP with files pre-created? Ask "create project zip".</div>
+    </footer>
+  </div>
+
+  <script>
+    // copy buttons functionality
+    document.querySelectorAll('.copy-btn').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        const id = btn.getAttribute('data-target');
+        const el = document.getElementById(id);
+        if(!el){ navigator.clipboard.writeText(''); return; }
+        const text = el.innerText;
+        try {
+          await navigator.clipboard.writeText(text);
+          btn.innerText = "Copied!";
+          setTimeout(()=> btn.innerText = "Copy", 1200);
+        } catch (err) {
+          btn.innerText = "Copy failed";
+          setTimeout(()=> btn.innerText = "Copy", 1200);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
