@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';  
 import { Camera, Sparkles, Zap, ShoppingBag, User, X, Mail, Lock, ArrowRight, Play } from 'lucide-react';
 
 const StylMorphHomepage = () => {
@@ -18,34 +19,52 @@ const StylMorphHomepage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogin = () => {
-    if (!loginData.email || !loginData.password) {
-      alert('Please fill in all fields');
-      return;
-    }
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      alert('Login functionality will be connected to backend!');
-      setShowLogin(false);
-      setLoginData({ email: '', password: '' });
-    }, 1500);
-  };
 
-  const handleSignup = () => {
-    if (!signupData.username || !signupData.email || !signupData.password) {
-      alert('Please fill in all fields');
-      return;
-    }
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      alert('Signup functionality will be connected to backend!');
-      setShowSignup(false);
-      setSignupData({ username: '', email: '', password: '' });
-    }, 1500);
-  };
+const handleLogin = async () => {
+  if (!loginData.email || !loginData.password) {
+    alert("Please fill in all fields");
+    return;
+  }
 
+  setIsLoading(true);
+  try {
+    const res = await axios.post("http://localhost:5000/auth/login", loginData);
+
+    // ✅ Save token in localStorage
+    localStorage.setItem("token", res.data.token);
+
+    alert("Login successful!");
+    setShowLogin(false);
+    setLoginData({ email: "", password: "" });
+
+    // Redirect or reload
+    window.location.href = "/dashboard"; 
+  } catch (err) {
+    alert(err.response?.data?.msg || "Login failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const handleSignup = async () => {
+  if (!signupData.username || !signupData.email || !signupData.password) {
+    alert("Please fill in all fields");
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    const res = await axios.post("http://localhost:5000/auth/signup", signupData);
+    alert(res.data.msg);
+
+    setShowSignup(false);
+    setSignupData({ username: "", email: "", password: "" });
+  } catch (err) {
+    alert(err.response?.data?.msg || "Signup failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="relative min-h-screen bg-black text-white">
       {/* Header */}
