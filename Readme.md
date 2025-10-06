@@ -5,7 +5,7 @@
 
 <h2>Project Overview</h2>  
 
-**STYLMORPH** is a next-generation 3D virtual try-on platform designed to revolutionize the online fashion shopping experience. It allows users to generate realistic 3D avatars of themselves by entering their body measurements such as height, weight, and body shape. These avatars act as digital twins, enabling users to virtually try on clothing items sourced from various e-commerce platforms. By simply pasting a product link, the garment is accurately mapped onto the user’s 3D model, providing a highly personalized and immersive shopping experience. Unlike traditional e-commerce platforms that rely on static 2D images or generic avatars, STYLMORPH delivers **true-to-body visualization**, bridging the gap between digital browsing and real-world fitting.  
+**STYLMORPH** is a next-generation 3D virtual try-on platform designed to revolutionize the online fashion shopping experience. It allows the users to generate realistic 3D avatars of themselves by entering their body measurements such as height, weight, and body shape. These avatars act as digital twins, enabling users to virtually try on clothing items sourced from various e-commerce platforms. By simply pasting a product link, the garment is accurately mapped onto the user’s 3D model, providing a highly personalized and immersive shopping experience. Unlike traditional e-commerce platforms that rely on static 2D images or generic avatars, STYLMORPH delivers **true-to-body visualization**, bridging the gap between digital browsing and real-world fitting.  
 
 ---
 
