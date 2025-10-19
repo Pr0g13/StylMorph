@@ -1,0 +1,19 @@
+Folder PATH listing for volume OS
+Volume serial number is 8AF4-6E8B
+C:.
+¦   app.js
+¦   backend.txt
+¦   server.js
+¦   
++---config
+¦       db.js
+¦       
++---controllers
+¦       auth.js
+¦       
++---models
+¦       User.js
+¦       
++---routes
+        auth.js
+        

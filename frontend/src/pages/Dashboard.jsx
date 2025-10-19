@@ -4,13 +4,14 @@ import {
   ChevronRight, Menu, ArrowLeft, Zap, Camera, Download, Share2,
   User, Mail, Edit2, Eye, Maximize2, Grid3x3, MoreVertical, Trash2
 } from 'lucide-react';
+import * as api from '../services/api';
+import RealisticAvatar3D from '../components/RealisticAvatar3D';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showMeasurementModal, setShowMeasurementModal] = useState(false);
-  const [showWearableModal, setShowWearableModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [user, setUser] = useState(null);
+  const [avatar, setAvatar] = useState(null);
   const [measurements, setMeasurements] = useState({
     height: '',
     chest: '',
@@ -21,264 +22,135 @@ const Dashboard = () => {
     armLength: '',
     neckSize: ''
   });
-  const [savedSets, setSavedSets] = useState([]);
-  const [currentSet, setCurrentSet] = useState(null);
-  const [wearables, setWearables] = useState([]);
   const [wearableInput, setWearableInput] = useState('');
-  const [user, setUser] = useState({ username: 'John Doe', email: 'john@example.com' });
   const [loading, setLoading] = useState(false);
   const [selectedWearable, setSelectedWearable] = useState(null);
-  const canvasRef = useRef(null);
-  const rotationRef = useRef(0);
-  const animationRef = useRef(null);
+  const [showRPMModal, setShowRPMModal] = useState(false);
 
-  // Draw 3D Avatar
-  const drawAvatar = (canvas, measurements, rotation = 0, showWearable = null) => {
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
-    
-    // Clear canvas with gradient
-    const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-    bgGradient.addColorStop(0, 'rgba(17, 24, 39, 0.8)');
-    bgGradient.addColorStop(1, 'rgba(5, 5, 15, 0.9)');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, width, height);
-    
-    // Add animated grid background
-    ctx.strokeStyle = 'rgba(99, 102, 241, 0.08)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < width; i += 40) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, height);
-      ctx.stroke();
+  // Fetch user and avatar data on mount
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    if (storedUser) {
+      setUser(storedUser);
+      loadAvatar();
+    } else {
+      window.location.href = "/";
     }
-    for (let i = 0; i < height; i += 40) {
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(width, i);
-      ctx.stroke();
+  }, []);
+
+  const loadAvatar = async () => {
+    try {
+      const data = await api.getAvatar();
+      if (data.msg === "Avatar not found") {
+        setAvatar(null);
+      } else {
+        setAvatar(data);
+        setMeasurements(data.measurements);
+      }
+    } catch (err) {
+      console.error("Error loading avatar:", err);
     }
-
-    // Draw light source
-    const lightGradient = ctx.createRadialGradient(width * 0.3, height * 0.2, 0, width * 0.5, height * 0.5, Math.max(width, height));
-    lightGradient.addColorStop(0, 'rgba(99, 102, 241, 0.1)');
-    lightGradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
-    ctx.fillStyle = lightGradient;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    ctx.rotate((rotation * Math.PI) / 180);
-
-    // Head
-    const headGradient = ctx.createRadialGradient(-5, -15, 10, 0, -120, 40);
-    headGradient.addColorStop(0, '#a78bfa');
-    headGradient.addColorStop(0.7, '#818cf8');
-    headGradient.addColorStop(1, '#6366f1');
-    ctx.fillStyle = headGradient;
-    ctx.beginPath();
-    ctx.arc(0, -120, 35, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#4f46e5';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Eyes with shine
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(-12, -125, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(12, -125, 5, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.beginPath();
-    ctx.arc(-12, -125, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(12, -125, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Torso
-    const chestWidth = measurements.chest ? Math.max(30, measurements.chest / 8) : 30;
-    const waistWidth = measurements.waist ? Math.max(20, measurements.waist / 10) : 20;
-    const hipWidth = measurements.hips ? Math.max(25, measurements.hips / 10) : 25;
-
-    const torsoGradient = ctx.createLinearGradient(0, -80, 0, 20);
-    torsoGradient.addColorStop(0, '#c084fc');
-    torsoGradient.addColorStop(0.5, '#a855f7');
-    torsoGradient.addColorStop(1, '#7e22ce');
-    ctx.fillStyle = torsoGradient;
-    ctx.beginPath();
-    ctx.moveTo(-chestWidth, -80);
-    ctx.quadraticCurveTo(-waistWidth, 0, -hipWidth, 20);
-    ctx.lineTo(hipWidth, 20);
-    ctx.quadraticCurveTo(waistWidth, 0, chestWidth, -80);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#6b21a8';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Neck
-    ctx.fillStyle = '#a78bfa';
-    ctx.fillRect(-8, -90, 16, 15);
-
-    // Arms
-    const armLength = measurements.armLength ? measurements.armLength / 2 : 60;
-    const armGradient = ctx.createLinearGradient(-50, -40, -50, 40);
-    armGradient.addColorStop(0, '#f97316');
-    armGradient.addColorStop(1, '#ea580c');
-    ctx.strokeStyle = armGradient;
-    ctx.lineWidth = 14;
-    ctx.lineCap = 'round';
-    
-    // Left arm
-    ctx.beginPath();
-    ctx.moveTo(-chestWidth, -40);
-    ctx.quadraticCurveTo(-chestWidth - 25, 0, -chestWidth - 30, armLength);
-    ctx.stroke();
-
-    // Right arm
-    ctx.beginPath();
-    ctx.moveTo(chestWidth, -40);
-    ctx.quadraticCurveTo(chestWidth + 25, 0, chestWidth + 30, armLength);
-    ctx.stroke();
-
-    // Legs
-    const legLength = measurements.inseam ? measurements.inseam / 2 : 100;
-    const legGradient = ctx.createLinearGradient(0, 20, 0, legLength);
-    legGradient.addColorStop(0, '#06b6d4');
-    legGradient.addColorStop(0.5, '#0891b2');
-    legGradient.addColorStop(1, '#0e7490');
-    ctx.strokeStyle = legGradient;
-    ctx.lineWidth = 16;
-    ctx.lineCap = 'round';
-
-    // Left leg
-    ctx.beginPath();
-    ctx.moveTo(-hipWidth / 2, 20);
-    ctx.lineTo(-hipWidth / 2, 20 + legLength);
-    ctx.stroke();
-
-    // Right leg
-    ctx.beginPath();
-    ctx.moveTo(hipWidth / 2, 20);
-    ctx.lineTo(hipWidth / 2, 20 + legLength);
-    ctx.stroke();
-
-    // Draw wearable on avatar
-    if (showWearable) {
-      ctx.fillStyle = 'rgba(168, 85, 247, 0.3)';
-      ctx.fillRect(-chestWidth - 5, -70, (chestWidth + 5) * 2 + 10, 85);
-      ctx.strokeStyle = '#a855f7';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-chestWidth - 5, -70, (chestWidth + 5) * 2 + 10, 85);
-      
-      ctx.fillStyle = '#c084fc';
-      ctx.font = 'bold 12px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(showWearable.thumbnail, 0, -35);
-    }
-
-    ctx.restore();
-
-    // Draw measurements info at bottom
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '11px monospace';
-    ctx.textAlign = 'left';
-    const infoY = height - 80;
-    const colWidth = width / 2;
-    
-    ctx.fillText(`H: ${measurements.height || '0'}cm`, 20, infoY);
-    ctx.fillText(`C: ${measurements.chest || '0'}cm`, 20, infoY + 20);
-    ctx.fillText(`W: ${measurements.waist || '0'}cm`, 20, infoY + 40);
-    
-    ctx.fillText(`Hip: ${measurements.hips || '0'}cm`, colWidth, infoY);
-    ctx.fillText(`Arm: ${measurements.armLength || '0'}cm`, colWidth, infoY + 20);
-    ctx.fillText(`Leg: ${measurements.inseam || '0'}cm`, colWidth, infoY + 40);
   };
 
-  // Animation loop
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const animate = () => {
-      rotationRef.current = (rotationRef.current + 0.8) % 360;
-      drawAvatar(canvas, measurements, rotationRef.current, selectedWearable);
-      animationRef.current = requestAnimationFrame(animate);
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationRef.current);
-  }, [measurements, selectedWearable]);
-
-  const handleMeasurementSubmit = () => {
+  const handleMeasurementSubmit = async () => {
     if (Object.values(measurements).some(val => !val)) {
       alert('Please fill all measurements');
       return;
     }
-    setCurrentSet({
-      id: Date.now(),
-      measurements: { ...measurements },
-      wearables: [],
-      createdAt: new Date().toLocaleDateString()
-    });
-    setShowMeasurementModal(false);
-    alert('✓ Avatar created successfully!');
-  };
 
-  const handleAddWearable = async () => {
-    if (!wearableInput.trim()) return;
-    
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const garmentEmojis = ['👕', '👔', '🧥', '👗', '👖', '🩳', '🧦', '👘'];
-      const randomEmoji = garmentEmojis[Math.floor(Math.random() * garmentEmojis.length)];
-      
-      const newWearable = {
-        id: Date.now(),
-        url: wearableInput,
-        name: `Garment ${wearables.length + 1}`,
-        thumbnail: randomEmoji,
-        addedAt: new Date().toLocaleDateString()
-      };
-      setWearables([...wearables, newWearable]);
-      setWearableInput('');
-    } catch (error) {
-      alert('Failed to fetch garment');
+      const result = await api.saveAvatar(measurements);
+      alert(result.msg);
+      await loadAvatar();
+    } catch (err) {
+      alert(err.response?.data?.msg || "Failed to save avatar");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveSet = () => {
-    if (!currentSet || wearables.length === 0) {
-      alert('Create an avatar and add at least one wearable');
+  const handleAddWearable = async () => {
+    if (!wearableInput.trim()) return;
+    
+    if (!avatar) {
+      alert("Create an avatar first!");
       return;
     }
-    const setToSave = {
-      ...currentSet,
-      wearables,
-      name: `Look ${savedSets.length + 1}`,
-      savedAt: new Date().toLocaleDateString()
-    };
-    setSavedSets([...savedSets, setToSave]);
-    alert('✓ Look saved successfully!');
+    
+    setLoading(true);
+    try {
+      const garmentEmojis = ['👕', '👔', '🧥', '👗', '👖', '🩳', '🧦', '👘'];
+      const randomEmoji = garmentEmojis[Math.floor(Math.random() * garmentEmojis.length)];
+      
+      const result = await api.addWearable(
+        wearableInput, 
+        `Garment ${(avatar?.wearables?.length || 0) + 1}`,
+        randomEmoji
+      );
+      
+      alert(result.msg);
+      await loadAvatar();
+      setWearableInput('');
+    } catch (error) {
+      alert('Failed to add wearable');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteWearable = (id) => {
-    setWearables(wearables.filter(w => w.id !== id));
-    if (selectedWearable?.id === id) setSelectedWearable(null);
+  const handleSaveSet = async () => {
+    if (!avatar || !avatar.wearables || avatar.wearables.length === 0) {
+      alert('Add at least one wearable first');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await api.saveSet(
+        `Look ${(avatar?.savedSets?.length || 0) + 1}`,
+        avatar.wearables
+      );
+      alert(result.msg);
+      await loadAvatar();
+    } catch (error) {
+      alert('Failed to save set');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteWearable = async (wearableId) => {
+    setLoading(true);
+    try {
+      const result = await api.deleteWearable(wearableId);
+      alert(result.msg);
+      await loadAvatar();
+      if (selectedWearable?._id === wearableId) setSelectedWearable(null);
+    } catch (error) {
+      alert('Failed to delete wearable');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteSet = async (setId) => {
+    setLoading(true);
+    try {
+      const result = await api.deleteSet(setId);
+      alert(result.msg);
+      await loadAvatar();
+    } catch (error) {
+      alert('Failed to delete set');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/";
   };
 
   return (
@@ -326,7 +198,7 @@ const Dashboard = () => {
         </nav>
 
         <div className="absolute bottom-6 left-6 right-6">
-          <button onClick={() => window.location.href = '/'} className={`w-full flex items-center ${sidebarOpen ? 'space-x-2' : 'justify-center'} px-4 py-3 bg-gray-800 hover:bg-red-600/20 border border-gray-700 hover:border-red-600/50 rounded-lg transition-all duration-300 group`}>
+          <button onClick={handleLogout} className={`w-full flex items-center ${sidebarOpen ? 'space-x-2' : 'justify-center'} px-4 py-3 bg-gray-800 hover:bg-red-600/20 border border-gray-700 hover:border-red-600/50 rounded-lg transition-all duration-300 group`}>
             <LogOut className="w-5 h-5 flex-shrink-0 group-hover:text-red-400 transition-colors" />
             {sidebarOpen && <span className="text-sm font-medium group-hover:text-red-400 transition-colors">Logout</span>}
           </button>
@@ -345,44 +217,60 @@ const Dashboard = () => {
             {activeTab === 'settings' && '⚙️ Settings'}
           </h1>
           <div className="flex items-center space-x-4">
-            <button className="p-2 hover:bg-gray-800 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-indigo-600/20">
-              <Download className="w-5 h-5" />
-            </button>
-            <button onClick={() => setShowSettingsModal(true)} className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300">
+            <div className="text-sm text-gray-400">
+              Welcome, <span className="text-white font-semibold">{user?.username}</span>
+            </div>
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300">
               <User className="w-5 h-5" />
-            </button>
+            </div>
           </div>
         </header>
 
         {/* Home Tab */}
         {activeTab === 'home' && (
           <div className="p-8 space-y-8 animate-fade-in">
-            {/* Welcome Section */}
             <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-                <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-indigo-600/10 to-transparent rounded-bl-full" />
-                  <div className="relative z-10">
-                    <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Welcome back, {user.username}! 👋</h2>
-                    <p className="text-gray-400 mb-6 text-lg leading-relaxed">Create your personalized 3D avatar and visualize how garments fit your unique body shape in real-time.</p>
-                    <button
-                      onClick={() => setActiveTab('avatar')}
-                      className="group/btn px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 flex items-center space-x-2 active:scale-95"
-                    >
-                      <span>Start Building</span>
-                      <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                    </button>
+              {avatar ? (
+                <div className="lg:col-span-2 relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
+                  <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
+                    <div className="h-96">
+                      <RealisticAvatar3D 
+                        measurements={avatar.measurements} 
+                        showWearable={selectedWearable}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="lg:col-span-2 relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
+                  <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-indigo-600/10 to-transparent rounded-bl-full" />
+                    <div className="relative z-10">
+                      <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                        Welcome, {user?.username}! 👋
+                      </h2>
+                      <p className="text-gray-400 mb-6 text-lg leading-relaxed">
+                        Create your personalized 3D avatar and visualize how garments fit your unique body shape in real-time.
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('avatar')}
+                        className="group/btn px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 flex items-center space-x-2 active:scale-95"
+                      >
+                        <span>Start Building</span>
+                        <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              {/* Quick Stats */}
               <div className="space-y-4">
                 {[
-                  { label: 'Saved Looks', value: savedSets.length, color: 'from-indigo-600/20 to-purple-600/20' },
-                  { label: 'Wearables Tried', value: wearables.length, color: 'from-purple-600/20 to-pink-600/20' },
-                  { label: 'Avatar Status', value: currentSet ? '✓ Ready' : '○ Pending', color: 'from-cyan-600/20 to-blue-600/20' }
+                  { label: 'Saved Looks', value: avatar?.savedSets?.length || 0, color: 'from-indigo-600/20 to-purple-600/20' },
+                  { label: 'Wearables Tried', value: avatar?.wearables?.length || 0, color: 'from-purple-600/20 to-pink-600/20' },
+                  { label: 'Avatar Status', value: avatar ? '✓ Ready' : '○ Pending', color: 'from-cyan-600/20 to-blue-600/20' }
                 ].map((stat, idx) => (
                   <div key={idx} className="relative group">
                     <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} rounded-xl blur-xl group-hover:blur-2xl transition-all duration-500`} />
@@ -394,58 +282,6 @@ const Dashboard = () => {
                 ))}
               </div>
             </div>
-
-            {/* Quick Actions & Tips */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-                <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/30 transition-all duration-300">
-                  <h3 className="text-xl font-bold mb-6">⚡ Quick Actions</h3>
-                  <div className="space-y-3">
-                    {[
-                      { icon: Plus, label: 'Create New Avatar', action: () => setActiveTab('avatar') },
-                      { icon: Shirt, label: 'Try Wearables', action: () => setActiveTab('wearables') },
-                      { icon: Save, label: 'View Saved Looks', action: () => setActiveTab('saved') }
-                    ].map((action, idx) => {
-                      const Icon = action.icon;
-                      return (
-                        <button key={idx} onClick={action.action} className="w-full flex items-center space-x-4 p-4 bg-gray-800/30 hover:bg-indigo-600/20 rounded-lg transition-all duration-300 group/action active:scale-95">
-                          <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center group-hover/action:scale-110 transition-all duration-300 shadow-lg shadow-indigo-600/30">
-                            <Icon className="w-5 h-5" />
-                          </div>
-                          <span className="font-medium">{action.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-                <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/30 transition-all duration-300">
-                  <h3 className="text-xl font-bold mb-6">💡 Tips & Tricks</h3>
-                  <ul className="space-y-3 text-sm text-gray-400">
-                    <li className="flex space-x-3">
-                      <span className="text-indigo-400 font-bold text-lg">✓</span>
-                      <span>Take accurate measurements for best fit visualization</span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <span className="text-indigo-400 font-bold text-lg">✓</span>
-                      <span>Paste product URLs to try garments instantly</span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <span className="text-indigo-400 font-bold text-lg">✓</span>
-                      <span>Save your favorite combinations for later</span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <span className="text-indigo-400 font-bold text-lg">✓</span>
-                      <span>Share styled looks with friends and family</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -453,20 +289,24 @@ const Dashboard = () => {
         {activeTab === 'avatar' && (
           <div className="p-8 animate-fade-in">
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Canvas */}
+              {/* 3D Avatar Preview */}
               <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 to-purple-600/30 rounded-2xl blur-3xl group-hover:blur-3xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
                 <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
-                  <div className="relative">
-                    <canvas
-                      ref={canvasRef}
-                      width={500}
-                      height={700}
-                      className="w-full h-auto"
-                    />
-                    <div className="absolute bottom-4 right-4 text-xs text-gray-500 bg-black/50 backdrop-blur-sm px-3 py-2 rounded-lg">
-                      🔄 Auto-rotating
-                    </div>
+                  <div className="h-[700px]">
+                    {measurements.height ? (
+                      <RealisticAvatar3D 
+                        measurements={measurements} 
+                        showWearable={selectedWearable}
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500">
+                        <div className="text-center">
+                          <Camera className="w-16 h-16 mx-auto mb-4 animate-bounce" />
+                          <p>Enter measurements to see your avatar</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -508,25 +348,34 @@ const Dashboard = () => {
                     </div>
                     <button
                       onClick={handleMeasurementSubmit}
-                      className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95"
+                      disabled={loading}
+                      className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95 disabled:opacity-50"
                     >
                       <Ruler className="w-5 h-5" />
-                      <span>Create Avatar</span>
+                      <span>{loading ? 'Saving...' : (avatar ? 'Update Avatar' : 'Create Avatar')}</span>
                     </button>
                   </div>
                 </div>
 
-                {currentSet && (
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-                    <div className="relative bg-gray-900 border border-green-600/50 rounded-2xl p-6 group-hover:border-green-400/70 transition-all duration-300">
-                      <div className="flex items-center space-x-3 text-green-400">
-                        <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
-                        <span className="font-medium">✓ Avatar Created Successfully!</span>
-                      </div>
-                    </div>
+                {/* Ready Player Me Integration */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-pink-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 group-hover:blur-2xl transition-all duration-500" />
+                  <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-6 group-hover:border-purple-600/30 transition-all duration-300">
+                    <h4 className="font-semibold mb-3 flex items-center space-x-2">
+                      <Zap className="w-5 h-5 text-purple-400" />
+                      <span>Advanced: Ready Player Me</span>
+                    </h4>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Create a photorealistic avatar using Ready Player Me
+                    </p>
+                    <button
+                      onClick={() => setShowRPMModal(true)}
+                      className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-all duration-300"
+                    >
+                      Open Ready Player Me
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -535,7 +384,7 @@ const Dashboard = () => {
         {/* Wearables Tab */}
         {activeTab === 'wearables' && (
           <div className="p-8 space-y-8 animate-fade-in">
-            {!currentSet ? (
+            {!avatar ? (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
                 <Camera className="w-16 h-16 mx-auto text-gray-600 mb-4 animate-bounce" />
                 <h3 className="text-2xl font-bold mb-2">Create Avatar First</h3>
@@ -578,16 +427,16 @@ const Dashboard = () => {
 
                 {/* Wearables Grid */}
                 <div>
-                  <h3 className="text-xl font-bold mb-4">Your Wearables</h3>
-                  {wearables.length === 0 ? (
+                  <h3 className="text-xl font-bold mb-4">Your Wearables ({avatar.wearables?.length || 0})</h3>
+                  {!avatar.wearables || avatar.wearables.length === 0 ? (
                     <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
                       <Shirt className="w-16 h-16 mx-auto text-gray-600 mb-4" />
                       <p className="text-gray-400">No wearables added yet. Add one to get started!</p>
                     </div>
                   ) : (
                     <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-                      {wearables.map((wearable) => (
-                        <div key={wearable.id} className="relative group">
+                      {avatar.wearables.map((wearable) => (
+                        <div key={wearable._id} className="relative group">
                           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 group-hover:blur-2xl transition-all duration-500" />
                           <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
                             <div className="aspect-square bg-gradient-to-br from-indigo-900 to-purple-900 flex items-center justify-center text-6xl relative overflow-hidden">
@@ -601,7 +450,7 @@ const Dashboard = () => {
                                 <button
                                   onClick={() => setSelectedWearable(wearable)}
                                   className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                                    selectedWearable?.id === wearable.id
+                                    selectedWearable?._id === wearable._id
                                       ? 'bg-indigo-600 shadow-lg shadow-indigo-600/50'
                                       : 'bg-gray-800 hover:bg-indigo-600/50'
                                   }`}
@@ -609,8 +458,9 @@ const Dashboard = () => {
                                   👁️ View
                                 </button>
                                 <button
-                                  onClick={() => deleteWearable(wearable.id)}
-                                  className="px-3 py-2 bg-gray-800 hover:bg-red-600/30 rounded-lg transition-all duration-300"
+                                  onClick={() => deleteWearable(wearable._id)}
+                                  disabled={loading}
+                                  className="px-3 py-2 bg-gray-800 hover:bg-red-600/30 rounded-lg transition-all duration-300 disabled:opacity-50"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -624,7 +474,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Save Outfit */}
-                {wearables.length > 0 && (
+                {avatar.wearables && avatar.wearables.length > 0 && (
                   <div className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-green-600/30 to-emerald-600/30 rounded-2xl blur-3xl opacity-0 group-hover:opacity-100 group-hover:blur-3xl transition-all duration-500" />
                     <div className="relative bg-gray-900 border border-green-600/50 rounded-2xl p-8 group-hover:border-green-400/70 transition-all duration-300">
@@ -635,10 +485,11 @@ const Dashboard = () => {
                         </div>
                         <button
                           onClick={handleSaveSet}
-                          className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg font-medium hover:shadow-lg hover:shadow-green-600/50 transition-all duration-300 flex items-center space-x-2 active:scale-95"
+                          disabled={loading}
+                          className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg font-medium hover:shadow-lg hover:shadow-green-600/50 transition-all duration-300 flex items-center space-x-2 active:scale-95 disabled:opacity-50"
                         >
                           <Save className="w-5 h-5" />
-                          <span>Save Look</span>
+                          <span>{loading ? 'Saving...' : 'Save Look'}</span>
                         </button>
                       </div>
                     </div>
@@ -652,7 +503,7 @@ const Dashboard = () => {
         {/* Saved Sets Tab */}
         {activeTab === 'saved' && (
           <div className="p-8 space-y-8 animate-fade-in">
-            {savedSets.length === 0 ? (
+            {!avatar || !avatar.savedSets || avatar.savedSets.length === 0 ? (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
                 <Save className="w-16 h-16 mx-auto text-gray-600 mb-4 animate-bounce" />
                 <h3 className="text-2xl font-bold mb-2">No Saved Looks Yet</h3>
@@ -666,8 +517,8 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {savedSets.map((set, idx) => (
-                  <div key={set.id} className="relative group">
+                {avatar.savedSets.map((set) => (
+                  <div key={set._id} className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 group-hover:blur-2xl transition-all duration-500" />
                     <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
                       <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative overflow-hidden">
@@ -679,16 +530,19 @@ const Dashboard = () => {
                       <div className="p-6">
                         <h4 className="font-bold text-lg mb-2">{set.name}</h4>
                         <div className="space-y-2 mb-4 text-sm text-gray-400">
-                          <p>📅 Saved: {set.savedAt}</p>
+                          <p>📅 Saved: {new Date(set.savedAt).toLocaleDateString()}</p>
                           <p>👕 Wearables: {set.wearables.length}</p>
-                          <p>📏 Height: {set.measurements.height}cm</p>
                         </div>
                         <div className="flex gap-2">
                           <button className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition-all duration-300 active:scale-95">
                             👁️ Preview
                           </button>
-                          <button className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition-all duration-300 active:scale-95">
-                            📤 Share
+                          <button 
+                            onClick={() => deleteSet(set._id)}
+                            disabled={loading}
+                            className="px-3 py-2 bg-gray-800 hover:bg-red-600/30 rounded-lg transition-all duration-300 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -704,108 +558,79 @@ const Dashboard = () => {
         {activeTab === 'settings' && (
           <div className="p-8 space-y-8 animate-fade-in">
             <div className="grid lg:grid-cols-3 gap-8">
-              {/* Profile Settings */}
               <div className="lg:col-span-2 relative group">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 group-hover:blur-2xl transition-all duration-500" />
                 <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/30 transition-all duration-300 space-y-6">
-                  <div>
-                    <h3 className="text-2xl font-bold mb-6 flex items-center space-x-2">
-                      <User className="w-6 h-6 text-indigo-400" />
-                      <span>Profile Settings</span>
-                    </h3>
-                  </div>
+                  <h3 className="text-2xl font-bold mb-6 flex items-center space-x-2">
+                    <User className="w-6 h-6 text-indigo-400" />
+                    <span>Profile Settings</span>
+                  </h3>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={user.username}
-                        readOnly
-                        className="flex-1 px-4 py-2 bg-black border border-gray-700 rounded-lg text-white"
-                      />
-                      <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all duration-300">
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      value={user?.username || ''}
+                      readOnly
+                      className="w-full px-4 py-2 bg-black border border-gray-700 rounded-lg text-white"
+                    />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-                    <div className="flex gap-3">
-                      <input
-                        type="email"
-                        value={user.email}
-                        readOnly
-                        className="flex-1 px-4 py-2 bg-black border border-gray-700 rounded-lg text-white"
-                      />
-                      <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all duration-300">
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-700 pt-6">
-                    <h4 className="font-semibold mb-4">Preferences</h4>
-                    <div className="space-y-4">
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" defaultChecked className="w-4 h-4" />
-                        <span>Receive email notifications</span>
-                      </label>
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" defaultChecked className="w-4 h-4" />
-                        <span>Share anonymous usage data</span>
-                      </label>
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4" />
-                        <span>Enable dark mode</span>
-                      </label>
-                    </div>
+                    <input
+                      type="email"
+                      value={user?.email || ''}
+                      readOnly
+                      className="w-full px-4 py-2 bg-black border border-gray-700 rounded-lg text-white"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Account Info */}
               <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 group-hover:blur-2xl transition-all duration-500" />
                 <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/30 transition-all duration-300">
                   <h4 className="font-bold mb-6">Account Info</h4>
                   <div className="space-y-4 text-sm">
                     <div className="p-4 bg-gray-800/50 rounded-lg">
-                      <p className="text-gray-400 mb-1">Account Created</p>
-                      <p className="font-semibold">January 15, 2024</p>
+                      <p className="text-gray-400 mb-1">Avatar Status</p>
+                      <p className="font-semibold">{avatar ? '✅ Active' : '⏳ Pending'}</p>
                     </div>
                     <div className="p-4 bg-gray-800/50 rounded-lg">
-                      <p className="text-gray-400 mb-1">Last Active</p>
-                      <p className="font-semibold">Today at 2:30 PM</p>
+                      <p className="text-gray-400 mb-1">Saved Looks</p>
+                      <p className="font-semibold">{avatar?.savedSets?.length || 0}</p>
                     </div>
                     <div className="p-4 bg-gray-800/50 rounded-lg">
-                      <p className="text-gray-400 mb-1">Subscription</p>
-                      <p className="font-semibold text-green-400">Premium Active</p>
+                      <p className="text-gray-400 mb-1">Wearables</p>
+                      <p className="font-semibold">{avatar?.wearables?.length || 0}</p>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Danger Zone */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-600/10 to-orange-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 group-hover:blur-2xl transition-all duration-500" />
-              <div className="relative bg-gray-900 border border-red-600/30 rounded-2xl p-8 group-hover:border-red-600/50 transition-all duration-300">
-                <h3 className="text-2xl font-bold mb-6 text-red-400">⚠️ Danger Zone</h3>
-                <div className="space-y-3">
-                  <button className="w-full px-6 py-3 border border-red-600/50 hover:bg-red-600/20 rounded-lg font-medium transition-all duration-300">
-                    🔄 Reset All Data
-                  </button>
-                  <button className="w-full px-6 py-3 border border-red-600/50 hover:bg-red-600/20 rounded-lg font-medium transition-all duration-300">
-                    ❌ Delete Account
-                  </button>
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Ready Player Me Modal */}
+      {showRPMModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
+          <div className="relative bg-gray-950 rounded-2xl w-full max-w-4xl h-[80vh] border border-gray-800 shadow-2xl overflow-hidden">
+            <button
+              onClick={() => setShowRPMModal(false)}
+              className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white transition-colors bg-black/50 backdrop-blur-sm p-2 rounded-lg"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <iframe
+              src="https://demo.readyplayer.me/avatar?frameApi"
+              className="w-full h-full"
+              allow="camera *; microphone *"
+            />
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fade-in {
