@@ -19,6 +19,12 @@ const StylMorphHomepage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+const [user, setUser] = useState(null);
+
+useEffect(() => {
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  if (storedUser) setUser(storedUser);
+}, []);
 
 const handleLogin = async () => {
   if (!loginData.email || !loginData.password) {
@@ -30,14 +36,20 @@ const handleLogin = async () => {
   try {
     const res = await axios.post("http://localhost:5000/auth/login", loginData);
 
-    // ✅ Save token in localStorage
+    // Save token
     localStorage.setItem("token", res.data.token);
+
+    // Save user info for homepage display
+    localStorage.setItem("user", JSON.stringify(res.data.user));
 
     alert("Login successful!");
     setShowLogin(false);
     setLoginData({ email: "", password: "" });
 
-    // Redirect or reload
+    // Optionally update state to show username immediately
+    // setUser(res.data.user);
+
+    // Redirect to dashboard
     window.location.href = "/dashboard"; 
   } catch (err) {
     alert(err.response?.data?.msg || "Login failed");
@@ -45,6 +57,14 @@ const handleLogin = async () => {
     setIsLoading(false);
   }
 };
+
+const handleLogout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  setUser(null);
+  window.location.reload();
+};
+
 
 const handleSignup = async () => {
   if (!signupData.username || !signupData.email || !signupData.password) {
