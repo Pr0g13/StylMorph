@@ -67,7 +67,7 @@ exports.addWearable = async (req, res) => {
       return res.status(400).json({ msg: "URL and name are required" });
     }
 
-    const avatar = await Avatar.findOne({ userId: req.user.id });
+      const avatar = await Avatar.findOne({ userId: req.user.id });
     
     if (!avatar) {
       return res.status(404).json({ msg: "Avatar not found. Create an avatar first." });
