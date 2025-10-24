@@ -11,7 +11,7 @@
 
 <h2>Problem in Current Systems</h2>  
 
-Online fashion retail faces a persistent issue: customers are often unable to see how a product will actually look and fit on their own body. As a result, many users experience confusion and dissatisfaction when clothing does not meet expectations. High return rates add to operational costs for businesses, while customer trust declines, reducing loyalty and repeat sales. These issues make online shopping less efficient, more frustrating, and costly for both customers and retailers.  
+Online fashion retail faces a persistent issue: customers are  unable to see how a product will actually look and fit on their own body. As a result, many users experience confusion and dissatisfaction when clothing does not meet expectations. High return rates add to operational costs for businesses, while customer trust declines, reducing loyalty and repeat sales. These issues make online shopping less efficient, more frustrating, and costly for both customers and retailers.  
 
 ---
 
