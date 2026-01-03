@@ -26,6 +26,13 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [selectedWearable, setSelectedWearable] = useState(null);
   const [showRPMModal, setShowRPMModal] = useState(false);
+  const [photos, setPhotos] = useState({
+    front: null,
+    back: null,
+    left: null,
+    right: null
+  });
+  const [showPhotoGuidelines, setShowPhotoGuidelines] = useState(false);
 
   // Fetch user and avatar data on mount
   useEffect(() => {
@@ -153,6 +160,54 @@ const Dashboard = () => {
     window.location.href = "/";
   };
 
+  const handlePhotoUpload = (position, file) => {
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotos(prev => ({
+          ...prev,
+          [position]: {
+            file: file,
+            preview: reader.result
+          }
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = (position) => {
+    setPhotos(prev => ({
+      ...prev,
+      [position]: null
+    }));
+  };
+
+  const handleSubmitPhotos = async () => {
+    if (!photos.front || !photos.back || !photos.left || !photos.right) {
+      alert('Please upload all 4 photos (front, back, left, right)');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('front', photos.front.file);
+      formData.append('back', photos.back.file);
+      formData.append('left', photos.left.file);
+      formData.append('right', photos.right.file);
+
+      // TODO: Replace with your actual API endpoint
+      // await api.uploadPhotos(formData);
+      
+      alert('Photos uploaded successfully! (API integration pending)');
+    } catch (error) {
+      alert('Failed to upload photos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
       {/* Sidebar */}
@@ -229,58 +284,173 @@ const Dashboard = () => {
         {/* Home Tab */}
         {activeTab === 'home' && (
           <div className="p-8 space-y-8 animate-fade-in">
-            <div className="grid lg:grid-cols-3 gap-6">
-              {avatar ? (
-                <div className="lg:col-span-2 relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                  <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
-                    <div className="h-96">
-                      <RealisticAvatar3D 
-                        measurements={avatar.measurements} 
-                        showWearable={selectedWearable}
-                      />
-                    </div>
+            {/* Photo Upload Section */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 rounded-2xl blur-3xl group-hover:blur-3xl transition-all duration-500" />
+              <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-cyan-600/50 transition-all duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold flex items-center space-x-2">
+                      <Camera className="w-6 h-6 text-cyan-400" />
+                      <span>Upload Body Reference Photos</span>
+                    </h2>
+                    <p className="text-gray-400 mt-2">Upload 4 photos (front, back, left, right) for accurate 3D body modeling</p>
                   </div>
+                  <button
+                    onClick={() => setShowPhotoGuidelines(!showPhotoGuidelines)}
+                    className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600/50 rounded-lg text-sm font-medium transition-all duration-300"
+                  >
+                    {showPhotoGuidelines ? 'Hide' : 'Show'} Guidelines
+                  </button>
                 </div>
-              ) : (
-                <div className="lg:col-span-2 relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-                  <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-indigo-600/10 to-transparent rounded-bl-full" />
-                    <div className="relative z-10">
-                      <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                        Welcome, {user?.username}! 👋
-                      </h2>
-                      <p className="text-gray-400 mb-6 text-lg leading-relaxed">
-                        Create your personalized 3D avatar and visualize how garments fit your unique body shape in real-time.
-                      </p>
-                      <button
-                        onClick={() => setActiveTab('avatar')}
-                        className="group/btn px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 flex items-center space-x-2 active:scale-95"
-                      >
-                        <span>Start Building</span>
-                        <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              <div className="space-y-4">
-                {[
-                  { label: 'Saved Looks', value: avatar?.savedSets?.length || 0, color: 'from-indigo-600/20 to-purple-600/20' },
-                  { label: 'Wearables Tried', value: avatar?.wearables?.length || 0, color: 'from-purple-600/20 to-pink-600/20' },
-                  { label: 'Avatar Status', value: avatar ? '✓ Ready' : '○ Pending', color: 'from-cyan-600/20 to-blue-600/20' }
-                ].map((stat, idx) => (
-                  <div key={idx} className="relative group">
-                    <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} rounded-xl blur-xl group-hover:blur-2xl transition-all duration-500`} />
-                    <div className="relative bg-gray-900 border border-gray-800 rounded-xl p-6 text-center group-hover:border-indigo-600/50 transition-all duration-300">
-                      <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">{stat.value}</div>
-                      <div className="text-sm text-gray-400 mt-2">{stat.label}</div>
+                {/* Photo Guidelines */}
+                {showPhotoGuidelines && (
+                  <div className="mb-6 bg-gray-800/50 border border-gray-700 rounded-xl p-6 space-y-4 text-sm">
+                    <h3 className="font-semibold text-cyan-400 text-base mb-3">📋 Photo Guidelines for Best Results</h3>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">👕 1. Clothing</h4>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
+                          <li>Wear tight-fitting clothes (leggings, fitted t-shirt)</li>
+                          <li>Avoid baggy clothing, large patterns, stripes, or logos</li>
+                          <li>Keep the same outfit for all 4 photos</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">🧍 2. Pose</h4>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
+                          <li>Stand straight and neutral, arms slightly away from body (~10-15 cm)</li>
+                          <li>Keep legs shoulder-width apart</li>
+                          <li>Avoid twisting, bending, or sitting</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">🎨 3. Background</h4>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
+                          <li>Use a plain, solid background (white, gray, or single color)</li>
+                          <li>Ensure no furniture, clutter, or other people in frame</li>
+                          <li>Avoid harsh shadows; use even lighting from front</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">📷 4. Camera & Distance</h4>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
+                          <li>Use a tripod or steady surface</li>
+                          <li>Keep camera at chest/waist height</li>
+                          <li>4 required views: front, back, left, right</li>
+                          <li>Camera perpendicular to your body (no tilt)</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">👤 5. Head & Hair</h4>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
+                          <li>Pull hair back to expose face and neck</li>
+                          <li>Face should be clearly visible</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">🎯 6. Resolution</h4>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
+                          <li>Use high-resolution images (1080p or higher)</li>
+                          <li>Avoid blurry, dark, or noisy photos</li>
+                          <li>Maintain same resolution across all 4 photos</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">✨ 7. Consistency</h4>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
+                          <li>Same outfit, background, lighting, and camera angle for all photos</li>
+                          <li>Inconsistent photos may cause warped or asymmetric 3D model</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Photo Upload Grid - 2x2 */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {['front', 'back', 'left', 'right'].map((position) => (
+                    <div key={position} className="relative group/photo">
+                      <div className="aspect-[0.5/] bg-gray-800 border-2 border-dashed border-gray-700 rounded-xl overflow-hidden hover:border-cyan-600/50 transition-all duration-300">
+                        {photos[position] ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={photos[position].preview}
+                              alt={`${position} view`}
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Green Check Mark */}
+                            <div className="absolute top-2 right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                            <button
+                              onClick={() => handleRemovePhoto(position)}
+                              className="absolute top-2 left-2 p-2 bg-red-600/80 hover:bg-red-600 rounded-lg backdrop-blur-sm transition-all duration-300"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                              <p className="text-white font-semibold text-sm capitalize">{position} View</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 transition-all duration-300">
+                            <Upload className="w-12 h-12 text-gray-500 mb-3" />
+                            <span className="text-sm font-medium text-gray-400 capitalize">{position} View</span>
+                            <span className="text-xs text-gray-500 mt-1">Click to upload</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => e.target.files[0] && handlePhotoUpload(position, e.target.files[0])}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  onClick={handleSubmitPhotos}
+                  disabled={loading || !photos.front || !photos.back || !photos.left || !photos.right}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-600/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>{loading ? 'Processing...' : 'Submit Photos'}</span>
+                  {!loading && photos.front && photos.back && photos.left && photos.right && (
+                    <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+                  )}
+                </button>
               </div>
+            </div>
+
+            {/* Stats Section */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              {[
+                { label: 'Saved Looks', value: avatar?.savedSets?.length || 0, color: 'from-indigo-600/20 to-purple-600/20' },
+                { label: 'Wearables Tried', value: avatar?.wearables?.length || 0, color: 'from-purple-600/20 to-pink-600/20' },
+                { label: 'Avatar Status', value: avatar ? '✓ Ready' : '○ Pending', color: 'from-cyan-600/20 to-blue-600/20' }
+              ].map((stat, idx) => (
+                <div key={idx} className="relative group">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} rounded-xl blur-xl group-hover:blur-2xl transition-all duration-500`} />
+                  <div className="relative bg-gray-900 border border-gray-800 rounded-xl p-6 text-center group-hover:border-indigo-600/50 transition-all duration-300">
+                    <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">{stat.value}</div>
+                    <div className="text-sm text-gray-400 mt-2">{stat.label}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
