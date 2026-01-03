@@ -22,9 +22,9 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ username });
     if (!user) return res.status(400).json({ msg: "Invalid credentials" });
 
     const match = await bcrypt.compare(password, user.password);
@@ -36,6 +36,7 @@ exports.login = async (req, res) => {
       token,
       user: { id: user._id, username: user.username, email: user.email }
     });
+
   } catch (err) {
     res.status(500).json({ msg: "Server error" });
   }

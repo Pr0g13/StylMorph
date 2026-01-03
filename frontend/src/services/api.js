@@ -7,11 +7,11 @@ const getAuthToken = () => {
 };
 
 // Auth endpoints
-export const login = async (email, password) => {
+export const login = async (username, password) => {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username, password }),
   });
   return res.json();
 };
