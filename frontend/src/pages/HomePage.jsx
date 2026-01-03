@@ -7,7 +7,7 @@ const StylMorphHomepage = () => {
   const [showSignup, setShowSignup] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [signupData, setSignupData] = useState({ username: '', email: '', password: '' });
   const videoRef = useRef(null);
 
@@ -27,7 +27,7 @@ useEffect(() => {
 }, []);
 
 const handleLogin = async () => {
-  if (!loginData.email || !loginData.password) {
+  if (!loginData.username || !loginData.password) {
     alert("Please fill in all fields");
     return;
   }
@@ -44,7 +44,7 @@ const handleLogin = async () => {
 
     alert("Login successful!");
     setShowLogin(false);
-    setLoginData({ email: "", password: "" });
+    setLoginData({ username: "", password: "" });
 
     // Optionally update state to show username immediately
     // setUser(res.data.user);
@@ -328,10 +328,10 @@ const handleSignup = async () => {
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
                   <input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    type="text"
+                    placeholder="your username"
+                    value={loginData.username}
+                    onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
                     className="w-full pl-12 pr-4 py-3 bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-600 transition-colors"
                   />
                 </div>
