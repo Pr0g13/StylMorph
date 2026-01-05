@@ -1,0 +1,32 @@
+Height                   : 165 cm
+Shoulder Width           : 40 cm
+Chest Width              : 30 cm
+Waist Width              : 25 cm
+Hip Width                : 32 cm
+Chest Circumference      : 81.3 cm
+Waist Circumference      : 99.4 cm
+Hip Circumference        : 126.8 cm
+Arm Length               : 64 cm
+Inseam                   : 84 cm
+Weight Estimate          : 40 kg
+
+
+waist depth : 18
+hip depth : 23
+chest depth: 21 
+
+new male avg body proportions
+
+Height                   : 173 cm
+Shoulder Width           : 44 cm
+Chest Width              : 33 cm
+Waist Width              : 27 cm
+Hip Width                : 32 cm
+Arm Length               : 65 cm
+Inseam                   : 86 cm
+Weight Estimate          : 40 kg
+
+
+waist depth : 20
+hip depth : 20
+chest depth: 22

@@ -1,5 +1,9 @@
 // src/controllers/avatar.js
 const Avatar = require("../models/Avatar");
+const axios = require("axios");
+const FormData = require("form-data");
+const fs = require("fs");
+
 
 // Get user's avatar
 exports.getAvatar = async (req, res) => {
@@ -147,5 +151,60 @@ exports.deleteSet = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Server error" });
+  }
+};
+//generate Avatar measurements
+exports.generateAvatarMeasurements = async (req, res) => {
+  try {
+    console.log("Files received:", Object.keys(req.files || {}));
+
+    const form = new FormData();
+
+    if (req.files?.front?.[0]) {
+      form.append(
+        "front",
+        req.files.front[0].buffer,
+        { filename: "front.jpg" }
+      );
+    }
+
+    if (req.files?.left?.[0]) {
+      form.append(
+        "left",
+        req.files.left[0].buffer,
+        { filename: "left.jpg" }
+      );
+    }
+
+    if (req.files?.right?.[0]) {
+      form.append(
+        "right",
+        req.files.right[0].buffer,
+        { filename: "right.jpg" }
+      );
+    }
+
+    // 🔥 THIS IS THE PYTHON SERVICE
+    const response = await axios.post(
+      "http://localhost:8000/measure",
+      form,
+      {
+        headers: form.getHeaders(),
+        timeout: 120000
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      measurements: response.data
+    });
+
+  } catch (error) {
+    console.error("Avatar measurement error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to generate avatar measurements"
+    });
   }
 };

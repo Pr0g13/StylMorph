@@ -100,3 +100,23 @@ export const deleteSet = async (setId) => {
   });
   return res.json();
 };
+
+export const uploadAvatarPhotos = async (formData) => {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch("http://localhost:5000/avatar/measure", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    body: formData
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  return res.json();
+};
+

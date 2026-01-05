@@ -5,6 +5,8 @@ import {
   User, Mail, Edit2, Eye, Maximize2, Grid3x3, MoreVertical, Trash2
 } from 'lucide-react';
 import * as api from '../services/api';
+//const result = await api.uploadAvatarPhotos(formData);
+
 import RealisticAvatar3D from '../components/RealisticAvatar3D';
 
 const Dashboard = () => {
@@ -184,29 +186,32 @@ const Dashboard = () => {
   };
 
   const handleSubmitPhotos = async () => {
-    if (!photos.front || !photos.back || !photos.left || !photos.right) {
-      alert('Please upload all 4 photos (front, back, left, right)');
-      return;
-    }
+  if (!photos.front || !photos.back || !photos.left || !photos.right) {
+    alert('Please upload all 4 photos (front, back, left, right)');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('front', photos.front.file);
-      formData.append('back', photos.back.file);
-      formData.append('left', photos.left.file);
-      formData.append('right', photos.right.file);
+  setLoading(true);
+  try {
+    const formData = new FormData();
+    formData.append('front', photos.front.file);
+    formData.append('back', photos.back.file);
+    formData.append('left', photos.left.file);
+    formData.append('right', photos.right.file);
 
-      // TODO: Replace with your actual API endpoint
-      // await api.uploadPhotos(formData);
-      
-      alert('Photos uploaded successfully! (API integration pending)');
-    } catch (error) {
-      alert('Failed to upload photos');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const result = await api.uploadAvatarPhotos(formData);
+
+    alert("Photos uploaded & processed successfully!");
+    console.log(result);
+
+  } catch (error) {
+   
+  console.error("UPLOAD ERROR 👉", error);
+  alert(error.message || "Upload failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
