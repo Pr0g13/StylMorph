@@ -1,3 +1,4 @@
+//frontend/src/pages/Dashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   LogOut, Settings, Plus, Save, X, Upload, Shirt, Ruler, 

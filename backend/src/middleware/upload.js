@@ -1,12 +1,34 @@
-// middleware/upload.js
+// backend/src/middleware/upload.js
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
+
+// Create temp directories
+const tempDir = path.join(__dirname, "../temp/inputs");
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+  console.log(`✅ Created upload directory: ${tempDir}`);
+}
 
 const storage = multer.diskStorage({
-  destination: "temp/inputs",
+  destination: tempDir,
   filename: (req, file, cb) => {
-    cb(null, `input_${Date.now()}.png`);
+    // Always save as test.png for PiFuHD compatibility
+    cb(null, "test.png");
   }
 });
 
-module.exports = multer({ storage });
+module.exports = multer({ 
+  storage,
+  fileFilter: (req, file, cb) => {
+    // Accept only images
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed!"), false);
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB
+  }
+});
