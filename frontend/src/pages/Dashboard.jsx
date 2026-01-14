@@ -26,12 +26,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [selectedWearable, setSelectedWearable] = useState(null);
   const [showRPMModal, setShowRPMModal] = useState(false);
-  const [photos, setPhotos] = useState({
-    front: null,
-    back: null,
-    left: null,
-    right: null
-  });
+  const [frontPhoto, setFrontPhoto] = useState(null);
   const [showPhotoGuidelines, setShowPhotoGuidelines] = useState(false);
 
   // Fetch user and avatar data on mount
@@ -160,53 +155,48 @@ const Dashboard = () => {
     window.location.href = "/";
   };
 
-  const handlePhotoUpload = (position, file) => {
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotos(prev => ({
-          ...prev,
-          [position]: {
-            file: file,
-            preview: reader.result
-          }
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+const handlePhotoUpload = (file) => {
+  if (file && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFrontPhoto({
+        file: file,
+        preview: reader.result
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+};
 
-  const handleRemovePhoto = (position) => {
-    setPhotos(prev => ({
-      ...prev,
-      [position]: null
-    }));
-  };
+const handleRemovePhoto = () => {
+  setFrontPhoto(null);
+};
 
-  const handleSubmitPhotos = async () => {
-    if (!photos.front || !photos.back || !photos.left || !photos.right) {
-      alert('Please upload all 4 photos (front, back, left, right)');
-      return;
-    }
+const handleSubmitPhoto = async () => {
+  if (!frontPhoto) {
+    alert("Please upload a photo");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('front', photos.front.file);
-      formData.append('back', photos.back.file);
-      formData.append('left', photos.left.file);
-      formData.append('right', photos.right.file);
+  setLoading(true);
+  try {
+    const formData = new FormData();
+    // ✅ Change this line - use "photo" to match backend
+    formData.append("photo", frontPhoto.file); // Changed from "image" to "photo"
 
-      // TODO: Replace with your actual API endpoint
-      // await api.uploadPhotos(formData);
-      
-      alert('Photos uploaded successfully! (API integration pending)');
-    } catch (error) {
-      alert('Failed to upload photos');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const result = await api.uploadPhoto(formData);
+    console.log("PiFuHD started:", result);
+
+    alert("3D model generation started!");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to process image");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
@@ -282,157 +272,57 @@ const Dashboard = () => {
         </header>
 
         {/* Home Tab */}
+{/* Home Tab */}
         {activeTab === 'home' && (
           <div className="p-8 space-y-8 animate-fade-in">
-            {/* Photo Upload Section */}
+            {/* Avatar Display or Build CTA */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 rounded-2xl blur-3xl group-hover:blur-3xl transition-all duration-500" />
-              <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-cyan-600/50 transition-all duration-300">
-                <div className="flex items-center justify-between mb-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 to-purple-600/30 rounded-2xl blur-3xl group-hover:blur-3xl transition-all duration-500" />
+              <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-indigo-600/50 transition-all duration-300">
+                {avatar ? (
                   <div>
-                    <h2 className="text-2xl font-bold flex items-center space-x-2">
-                      <Camera className="w-6 h-6 text-cyan-400" />
-                      <span>Upload Body Reference Photos</span>
+                    <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2">
+                      <User className="w-6 h-6 text-indigo-400" />
+                      <span>Your Avatar</span>
                     </h2>
-                    <p className="text-gray-400 mt-2">Upload 4 photos (front, back, left, right) for accurate 3D body modeling</p>
-                  </div>
-                  <button
-                    onClick={() => setShowPhotoGuidelines(!showPhotoGuidelines)}
-                    className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600/50 rounded-lg text-sm font-medium transition-all duration-300"
-                  >
-                    {showPhotoGuidelines ? 'Hide' : 'Show'} Guidelines
-                  </button>
-                </div>
-
-                {/* Photo Guidelines */}
-                {showPhotoGuidelines && (
-                  <div className="mb-6 bg-gray-800/50 border border-gray-700 rounded-xl p-6 space-y-4 text-sm">
-                    <h3 className="font-semibold text-cyan-400 text-base mb-3">📋 Photo Guidelines for Best Results</h3>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-semibold text-white mb-1">👕 1. Clothing</h4>
-                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
-                          <li>Wear tight-fitting clothes (leggings, fitted t-shirt)</li>
-                          <li>Avoid baggy clothing, large patterns, stripes, or logos</li>
-                          <li>Keep the same outfit for all 4 photos</li>
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="font-semibold text-white mb-1">🧍 2. Pose</h4>
-                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
-                          <li>Stand straight and neutral, arms slightly away from body (~10-15 cm)</li>
-                          <li>Keep legs shoulder-width apart</li>
-                          <li>Avoid twisting, bending, or sitting</li>
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="font-semibold text-white mb-1">🎨 3. Background</h4>
-                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
-                          <li>Use a plain, solid background (white, gray, or single color)</li>
-                          <li>Ensure no furniture, clutter, or other people in frame</li>
-                          <li>Avoid harsh shadows; use even lighting from front</li>
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="font-semibold text-white mb-1">📷 4. Camera & Distance</h4>
-                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
-                          <li>Use a tripod or steady surface</li>
-                          <li>Keep camera at chest/waist height</li>
-                          <li>4 required views: front, back, left, right</li>
-                          <li>Camera perpendicular to your body (no tilt)</li>
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="font-semibold text-white mb-1">👤 5. Head & Hair</h4>
-                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
-                          <li>Pull hair back to expose face and neck</li>
-                          <li>Face should be clearly visible</li>
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="font-semibold text-white mb-1">🎯 6. Resolution</h4>
-                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
-                          <li>Use high-resolution images (1080p or higher)</li>
-                          <li>Avoid blurry, dark, or noisy photos</li>
-                          <li>Maintain same resolution across all 4 photos</li>
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="font-semibold text-white mb-1">✨ 7. Consistency</h4>
-                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-2">
-                          <li>Same outfit, background, lighting, and camera angle for all photos</li>
-                          <li>Inconsistent photos may cause warped or asymmetric 3D model</li>
-                        </ul>
-                      </div>
+                    <div className="h-[500px] rounded-xl overflow-hidden">
+                      <RealisticAvatar3D 
+                        measurements={measurements} 
+                        showWearable={selectedWearable}
+                      />
                     </div>
+                    <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        { label: 'Height', value: `${measurements.height}cm` },
+                        { label: 'Chest', value: `${measurements.chest}cm` },
+                        { label: 'Waist', value: `${measurements.waist}cm` },
+                        { label: 'Hips', value: `${measurements.hips}cm` }
+                      ].map((stat, idx) => (
+                        <div key={idx} className="bg-gray-800/50 rounded-lg p-4 text-center">
+                          <div className="text-xs text-gray-400 mb-1">{stat.label}</div>
+                          <div className="text-lg font-bold text-indigo-400">{stat.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center">
+                      <Ruler className="w-12 h-12" />
+                    </div>
+                    <h2 className="text-3xl font-bold mb-4">Build Your Avatar</h2>
+                    <p className="text-gray-400 mb-8 max-w-md mx-auto">
+                      Create your personalized 3D avatar by entering your measurements. 
+                      This will help you virtually try on clothes with accurate fit.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('avatar')}
+                      className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl font-medium hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 active:scale-95"
+                    >
+                      Start Building Avatar
+                    </button>
                   </div>
                 )}
-
-                {/* Photo Upload Grid - 2x2 */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {['front', 'back', 'left', 'right'].map((position) => (
-                    <div key={position} className="relative group/photo">
-                      <div className="aspect-[0.5/] bg-gray-800 border-2 border-dashed border-gray-700 rounded-xl overflow-hidden hover:border-cyan-600/50 transition-all duration-300">
-                        {photos[position] ? (
-                          <div className="relative w-full h-full">
-                            <img
-                              src={photos[position].preview}
-                              alt={`${position} view`}
-                              className="w-full h-full object-cover"
-                            />
-                            {/* Green Check Mark */}
-                            <div className="absolute top-2 right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                            <button
-                              onClick={() => handleRemovePhoto(position)}
-                              className="absolute top-2 left-2 p-2 bg-red-600/80 hover:bg-red-600 rounded-lg backdrop-blur-sm transition-all duration-300"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                              <p className="text-white font-semibold text-sm capitalize">{position} View</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 transition-all duration-300">
-                            <Upload className="w-12 h-12 text-gray-500 mb-3" />
-                            <span className="text-sm font-medium text-gray-400 capitalize">{position} View</span>
-                            <span className="text-xs text-gray-500 mt-1">Click to upload</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => e.target.files[0] && handlePhotoUpload(position, e.target.files[0])}
-                              className="hidden"
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  onClick={handleSubmitPhotos}
-                  disabled={loading || !photos.front || !photos.back || !photos.left || !photos.right}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-600/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Camera className="w-5 h-5" />
-                  <span>{loading ? 'Processing...' : 'Submit Photos'}</span>
-                  {!loading && photos.front && photos.back && photos.left && photos.right && (
-                    <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                  )}
-                </button>
               </div>
             </div>
 
@@ -455,29 +345,99 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Avatar Tab */}
-        {activeTab === 'avatar' && (
+{activeTab === 'avatar' && (
           <div className="p-8 animate-fade-in">
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* 3D Avatar Preview */}
+              {/* Photo Upload Section - Single Front Image */}
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 to-purple-600/30 rounded-2xl blur-3xl group-hover:blur-3xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-                <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
-                  <div className="h-[700px]">
-                    {measurements.height ? (
-                      <RealisticAvatar3D 
-                        measurements={measurements} 
-                        showWearable={selectedWearable}
-                      />
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-500">
-                        <div className="text-center">
-                          <Camera className="w-16 h-16 mx-auto mb-4 animate-bounce" />
-                          <p>Enter measurements to see your avatar</p>
-                        </div>
-                      </div>
-                    )}
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 rounded-2xl blur-3xl group-hover:blur-3xl transition-all duration-500" />
+                <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-cyan-600/50 transition-all duration-300">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold flex items-center space-x-2">
+                        <Camera className="w-6 h-6 text-cyan-400" />
+                        <span>Upload Front Photo</span>
+                      </h2>
+                      <p className="text-gray-400 mt-2">Upload a front-facing photo for reference</p>
+                    </div>
+                    <button
+                      onClick={() => setShowPhotoGuidelines(!showPhotoGuidelines)}
+                      className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600/50 rounded-lg text-sm font-medium transition-all duration-300"
+                    >
+                      {showPhotoGuidelines ? 'Hide' : 'Show'} Guidelines
+                    </button>
                   </div>
+
+                  {/* Photo Guidelines */}
+                  {showPhotoGuidelines && (
+                    <div className="mb-6 bg-gray-800/50 border border-gray-700 rounded-xl p-6 space-y-3 text-sm max-h-64 overflow-y-auto custom-scrollbar">
+                      <h3 className="font-semibold text-cyan-400 text-base mb-3">📋 Photo Guidelines</h3>
+                      <ul className="list-disc list-inside text-gray-300 space-y-2 ml-2">
+                        <li>Wear tight-fitting clothes (leggings, fitted t-shirt)</li>
+                        <li>Stand straight with arms slightly away from body</li>
+                        <li>Use a plain, solid background</li>
+                        <li>Ensure good, even lighting</li>
+                        <li>Keep camera at chest height</li>
+                        <li>Face directly toward camera</li>
+                        <li>High resolution (1080p or higher)</li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Single Photo Upload */}
+                  <div className="relative group/photo mb-6">
+                    <div className="aspect-[9/16] max-h-[500px] bg-gray-800 border-2 border-dashed border-gray-700 rounded-xl overflow-hidden hover:border-cyan-600/50 transition-all duration-300">
+                      {frontPhoto ? (
+                        <div className="relative w-full h-full">
+                          <img
+                            src={frontPhoto.preview}
+                            alt="Front view"
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Green Check Mark */}
+                          <div className="absolute top-2 right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <button
+                            onClick={handleRemovePhoto}
+                            className="absolute top-2 left-2 p-2 bg-red-600/80 hover:bg-red-600 rounded-lg backdrop-blur-sm transition-all duration-300"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                            <p className="text-white font-semibold text-sm">Front View</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 transition-all duration-300">
+                          <Upload className="w-16 h-16 text-gray-500 mb-4" />
+                          <span className="text-lg font-medium text-gray-400">Front View Photo</span>
+                          <span className="text-sm text-gray-500 mt-2">Click to upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => e.target.files[0] && handlePhotoUpload(e.target.files[0])}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    onClick={handleSubmitPhoto}
+                    disabled={loading || !frontPhoto}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-600/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Camera className="w-5 h-5" />
+                    <span>{loading ? 'Processing...' : 'Submit Photo'}</span>
+                    {!loading && frontPhoto && (
+                      <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+                    )}
+                  </button>
                 </div>
               </div>
 

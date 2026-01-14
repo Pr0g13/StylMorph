@@ -16,6 +16,62 @@ export const login = async (username, password) => {
   return res.json();
 };
 
+// frontend/src/services/api.js - Change this:
+export const uploadPhoto = async (formData) => {
+  const token = getAuthToken();
+  const endpoint = `${API_URL}/api/pifu/generate`;
+
+  console.log("🔄 Uploading to:", endpoint);
+  
+  // Log FormData contents
+  console.log("📁 FormData entries:");
+  for (let pair of formData.entries()) {
+    console.log(`  ${pair[0]}:`, pair[1]);
+  }
+  
+  console.log("🔑 Token:", token ? "Present" : "Missing");
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        // Don't set Content-Type for FormData
+        "Authorization": `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    console.log("📤 Response status:", res.status, res.statusText);
+    
+    const responseText = await res.text();
+    console.log("📤 Response body:", responseText);
+    
+    if (!res.ok) {
+      throw new Error(`Upload failed (${res.status}): ${responseText}`);
+    }
+    
+    return JSON.parse(responseText);
+    
+  } catch (error) {
+    console.error("❌ Upload error:", error);
+    throw error;
+  }
+};
+
+// Add a test function
+export const testPifuConnection = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/pifu/health`);
+    const data = await res.json();
+    console.log("🧪 Health check:", data);
+    return data;
+  } catch (error) {
+    console.error("❌ Health check failed:", error);
+    throw error;
+  }
+};
+
+
 export const signup = async (username, email, password) => {
   const res = await fetch(`${API_URL}/auth/signup`, {
     method: "POST",
