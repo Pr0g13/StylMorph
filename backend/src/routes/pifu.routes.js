@@ -1,10 +1,20 @@
-// routes/pifu.routes.js
+// backend/src/routes/pifu.routes.js
 const express = require("express");
 const upload = require("../middleware/upload");
 const { runPifuHD } = require("../controllers/pifu.controller");
 
 const router = express.Router();
 
-router.post("/generate", upload.single("image"), runPifuHD);
+// Test endpoint
+router.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "PiFu API is working",
+    availableRoutes: ["POST /generate"]
+  });
+});
+
+// Generate 3D model - IMPORTANT: field name must match frontend
+router.post("/generate", upload.single("photo"), runPifuHD);
 
 module.exports = router;
