@@ -1,12 +1,11 @@
 // frontend/src/services/api.js
 const API_URL = "http://localhost:5000";
 
-// Get auth token
-const getAuthToken = () => {
-  return localStorage.getItem("token");
-};
+const getToken = () => localStorage.getItem("token");
 
-// Auth endpoints
+const authHeader = () => ({ Authorization: `Bearer ${getToken()}` });
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
 export const login = async (username, password) => {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
@@ -15,62 +14,6 @@ export const login = async (username, password) => {
   });
   return res.json();
 };
-
-// frontend/src/services/api.js - Change this:
-export const uploadPhoto = async (formData) => {
-  const token = getAuthToken();
-  const endpoint = `${API_URL}/api/pifu/generate`;
-
-  console.log("🔄 Uploading to:", endpoint);
-  
-  // Log FormData contents
-  console.log("📁 FormData entries:");
-  for (let pair of formData.entries()) {
-    console.log(`  ${pair[0]}:`, pair[1]);
-  }
-  
-  console.log("🔑 Token:", token ? "Present" : "Missing");
-
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        // Don't set Content-Type for FormData
-        "Authorization": `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    console.log("📤 Response status:", res.status, res.statusText);
-    
-    const responseText = await res.text();
-    console.log("📤 Response body:", responseText);
-    
-    if (!res.ok) {
-      throw new Error(`Upload failed (${res.status}): ${responseText}`);
-    }
-    
-    return JSON.parse(responseText);
-    
-  } catch (error) {
-    console.error("❌ Upload error:", error);
-    throw error;
-  }
-};
-
-// Add a test function
-export const testPifuConnection = async () => {
-  try {
-    const res = await fetch(`${API_URL}/api/pifu/health`);
-    const data = await res.json();
-    console.log("🧪 Health check:", data);
-    return data;
-  } catch (error) {
-    console.error("❌ Health check failed:", error);
-    throw error;
-  }
-};
-
 
 export const signup = async (username, email, password) => {
   const res = await fetch(`${API_URL}/auth/signup`, {
@@ -81,78 +24,77 @@ export const signup = async (username, email, password) => {
   return res.json();
 };
 
-// Avatar endpoints
+// ── Avatar ────────────────────────────────────────────────────────────────────
 export const getAvatar = async () => {
-  const token = getAuthToken();
   const res = await fetch(`${API_URL}/avatar`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    }
+    headers: { ...authHeader() },
   });
   return res.json();
 };
 
-export const saveAvatar = async (measurements, readyPlayerMeUrl = null, parametricData = null) => {
-  const token = getAuthToken();
+export const saveAvatar = async (measurements) => {
   const res = await fetch(`${API_URL}/avatar`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({ measurements, readyPlayerMeUrl, parametricData })
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ measurements }),
   });
   return res.json();
 };
 
 export const addWearable = async (url, name, thumbnail) => {
-  const token = getAuthToken();
   const res = await fetch(`${API_URL}/avatar/wearables`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({ url, name, thumbnail })
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ url, name, thumbnail }),
   });
   return res.json();
 };
 
 export const deleteWearable = async (wearableId) => {
-  const token = getAuthToken();
   const res = await fetch(`${API_URL}/avatar/wearables/${wearableId}`, {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    }
+    headers: { ...authHeader() },
   });
   return res.json();
 };
 
 export const saveSet = async (name, wearables) => {
-  const token = getAuthToken();
   const res = await fetch(`${API_URL}/avatar/sets`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({ name, wearables })
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ name, wearables }),
   });
   return res.json();
 };
 
 export const deleteSet = async (setId) => {
-  const token = getAuthToken();
   const res = await fetch(`${API_URL}/avatar/sets/${setId}`, {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    }
+    headers: { ...authHeader() },
   });
   return res.json();
+};
+
+// ── SMPL 3D Body Generation ───────────────────────────────────────────────────
+/**
+ * Upload 4 body images + height to generate a personalised SMPL 3D avatar.
+ *
+ * @param {FormData} formData  Fields: front, back, left, right (File), height (string)
+ * @returns {{ success, measurements, modelUrl }}
+ */
+export const generateSMPLAvatar = async (formData) => {
+  const res = await fetch(`${API_URL}/api/measurements/calculate`, {
+    method: "POST",
+    headers: { ...authHeader() }, // Do NOT set Content-Type – let browser set multipart boundary
+    body: formData,
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Server error (${res.status}): ${text}`);
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid JSON response: ${text.slice(0, 200)}`);
+  }
 };

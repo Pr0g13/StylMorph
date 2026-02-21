@@ -1,3 +1,4 @@
+// backend/src/config/cloudinary.js
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
@@ -6,13 +7,19 @@ cloudinary.config({
   api_secret: process.env.API_SECRET,
 });
 
-const uploadObj = async (filePath) => {
+/**
+ * Upload a raw .obj file to Cloudinary.
+ * @param {string} filePath  Absolute path to the .obj file
+ * @returns {string}         Secure HTTPS URL
+ */
+const uploadSmplObj = async (filePath) => {
   const result = await cloudinary.uploader.upload(filePath, {
-    resource_type: "raw",      // IMPORTANT for .obj files
-    folder: "pifuhd_models",
+    resource_type: "raw",
+    folder: "smpl_models",
+    use_filename: true,
+    unique_filename: true,
   });
-
   return result.secure_url;
 };
 
-module.exports = { uploadObj };
+module.exports = { uploadSmplObj };

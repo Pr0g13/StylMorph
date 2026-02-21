@@ -1,338 +1,343 @@
+// frontend/src/components/RealisticAvatar3D.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-const RealisticAvatar3D = ({ measurements, showWearable = null }) => {
+/**
+ * RealisticAvatar3D
+ *
+ * Props:
+ *  - modelUrl     (string | null) – Cloudinary HTTPS URL to a .obj file
+ *                                   Expects body.mtl in the same folder
+ *  - measurements (object)        – fallback parametric body if no modelUrl
+ *  - showWearable (object | null)
+ */
+const RealisticAvatar3D = ({ measurements = {}, showWearable = null, modelUrl = null }) => {
   const containerRef = useRef(null);
-  const sceneRef = useRef(null);
-  const rendererRef = useRef(null);
-  const humanGroupRef = useRef(null);
-  const animationIdRef = useRef(null);
+  const animationRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadPct, setLoadPct] = useState(0);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
-    if (!containerRef.current || !measurements.height) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     setIsLoading(true);
+    setLoadError(null);
 
-    // Scene setup
+    // ── Scene ────────────────────────────────────────────────────────────────
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f1724);
-    scene.fog = new THREE.Fog(0x0f1724, 10, 50);
-    sceneRef.current = scene;
+    scene.background = new THREE.Color(0x0d1117);
+    scene.fog = new THREE.Fog(0x0d1117, 14, 60);
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.set(0, 0.5, 2.5);
-    camera.lookAt(0, 0.5, 0);
+    // ── Camera ───────────────────────────────────────────────────────────────
+    const w = container.clientWidth || 600;
+    const h = container.clientHeight || 500;
+    const camera = new THREE.PerspectiveCamera(55, w / h, 0.01, 200);
+    camera.position.set(0, 1.0, 3.5);
+    camera.lookAt(0, 1.0, 0);
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    // ── Renderer ─────────────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowShadowMap;
-    containerRef.current.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
+    // ── OrbitControls ────────────────────────────────────────────────────────
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.minDistance = 0.6;
+    controls.maxDistance = 10;
+    controls.maxPolarAngle = Math.PI * 0.93;
+    controls.target.set(0, 1.0, 0);
+    controls.update();
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 8, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.camera.far = 50;
-    scene.add(directionalLight);
+    // ── Lighting — designed for skin ─────────────────────────────────────────
+    // Ambient: warm fill
+    scene.add(new THREE.AmbientLight(0xffeedd, 0.60));
 
-    const pointLight = new THREE.PointLight(0x6366f1, 0.5);
-    pointLight.position.set(-5, 5, 5);
-    scene.add(pointLight);
+    // Key light: warm from upper-left front
+    const keyLight = new THREE.DirectionalLight(0xfff5e0, 1.4);
+    keyLight.position.set(-3, 9, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.far = 40;
+    scene.add(keyLight);
 
-    // Create grid floor
-    const gridHelper = new THREE.GridHelper(10, 20, 0x2d3748, 0x1a202c);
-    gridHelper.position.y = -1;
-    scene.add(gridHelper);
+    // Fill light: cool left bounce
+    const fillLight = new THREE.DirectionalLight(0xc0d8ff, 0.45);
+    fillLight.position.set(4, 4, -4);
+    scene.add(fillLight);
 
-    // Create realistic human based on measurements
-    const createRealisticHuman = () => {
-      const group = new THREE.Group();
+    // Rim light: back glow to separate figure from background
+    const rimLight = new THREE.PointLight(0xffffff, 0.55, 20);
+    rimLight.position.set(0, 4, -5);
+    scene.add(rimLight);
 
-      // Normalize measurements to scale (170cm = 1 unit)
-      const heightScale = (measurements.height || 170) / 170;
-      const chestScale = (measurements.chest || 100) / 100;
-      const waistScale = (measurements.waist || 80) / 100;
-      const hipScale = (measurements.hips || 90) / 100;
+    // Sub-surface scattering approximation: low warm light from below
+    const subLight = new THREE.PointLight(0xff9966, 0.25, 6);
+    subLight.position.set(0, 0, 2);
+    scene.add(subLight);
 
-      // Materials
-      const skinMaterial = new THREE.MeshStandardMaterial({
-        color: 0xfdbcb4,
-        roughness: 0.65,
-        metalness: 0,
-        side: THREE.FrontSide,
-      });
+    // ── Ground ────────────────────────────────────────────────────────────────
+    const grid = new THREE.GridHelper(12, 24, 0x1e2a3a, 0x111827);
+    scene.add(grid);
 
-      const clothesMaterial = new THREE.MeshStandardMaterial({
-        color: 0x3b4558,
-        roughness: 0.8,
-        metalness: 0.1,
-      });
+    // Shadow catcher
+    const shadowGeo = new THREE.PlaneGeometry(6, 6);
+    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.25 });
+    const shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
 
-      // HEAD
-      const headGeometry = new THREE.SphereGeometry(0.4 * heightScale, 32, 32);
-      const head = new THREE.Mesh(headGeometry, skinMaterial);
-      head.position.y = 1.65 * heightScale;
-      head.castShadow = true;
-      head.receiveShadow = true;
-      group.add(head);
+    // ── Model group ───────────────────────────────────────────────────────────
+    const mainGroup = new THREE.Group();
+    scene.add(mainGroup);
 
-      // EYES
-      const eyeGeometry = new THREE.SphereGeometry(0.08, 16, 16);
-      const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x8b6f47 });
+    // Default skin material (used if MTL not available)
+    const defaultSkinMat = new THREE.MeshPhongMaterial({
+      color: 0xe8b48a,
+      specular: 0x331100,
+      shininess: 18,
+      side: THREE.FrontSide,
+    });
 
-      const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-      leftEye.position.set(-0.15, 1.75 * heightScale, 0.35 * heightScale);
-      const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-      rightEye.position.set(0.15, 1.75 * heightScale, 0.35 * heightScale);
-      group.add(leftEye, rightEye);
+    // ── Idle rotation ─────────────────────────────────────────────────────────
+    let idleRotation = true;
+    controls.addEventListener('start', () => { idleRotation = false; });
+    controls.addEventListener('end', () => { setTimeout(() => { idleRotation = true; }, 4000); });
 
-      // NECK
-      const neckGeometry = new THREE.CylinderGeometry(0.15, 0.18, 0.15, 16);
-      const neck = new THREE.Mesh(neckGeometry, skinMaterial);
-      neck.position.y = 1.5 * heightScale;
-      neck.castShadow = true;
-      neck.receiveShadow = true;
-      group.add(neck);
-
-      // TORSO (tapered for realistic shape)
-      const torsoGeometry = new THREE.BoxGeometry(
-        chestScale * 0.5,
-        heightScale * 0.5,
-        chestScale * 0.35
-      );
-      const torso = new THREE.Mesh(torsoGeometry, clothesMaterial);
-      torso.position.y = 1.0 * heightScale;
-      torso.castShadow = true;
-      torso.receiveShadow = true;
-      group.add(torso);
-
-      // SHOULDERS (wider for realism)
-      const shoulderGeometry = new THREE.BoxGeometry(
-        (measurements.shoulder || 45) / 45 * 0.6,
-        0.2 * heightScale,
-        chestScale * 0.25
-      );
-      const shoulderMaterial = new THREE.MeshStandardMaterial({
-        color: 0x3b4558,
-        roughness: 0.8,
-      });
-      const shoulders = new THREE.Mesh(shoulderGeometry, shoulderMaterial);
-      shoulders.position.y = 1.3 * heightScale;
-      shoulders.castShadow = true;
-      shoulders.receiveShadow = true;
-      group.add(shoulders);
-
-      // LEFT ARM
-      const armLength = (measurements.armLength || 60) / 100;
-      const armGeometry = new THREE.CylinderGeometry(
-        0.12 * heightScale,
-        0.1 * heightScale,
-        armLength,
-        16
-      );
-      const leftArm = new THREE.Mesh(armGeometry, skinMaterial);
-      leftArm.position.set(-chestScale * 0.35, 1.1 * heightScale, 0);
-      leftArm.rotation.z = 0.2;
-      leftArm.castShadow = true;
-      leftArm.receiveShadow = true;
-      group.add(leftArm);
-
-      // RIGHT ARM
-      const rightArm = new THREE.Mesh(armGeometry, skinMaterial);
-      rightArm.position.set(chestScale * 0.35, 1.1 * heightScale, 0);
-      rightArm.rotation.z = -0.2;
-      rightArm.castShadow = true;
-      rightArm.receiveShadow = true;
-      group.add(rightArm);
-
-      // HIPS/PELVIS
-      const hipsGeometry = new THREE.BoxGeometry(
-        hipScale * 0.5,
-        0.25 * heightScale,
-        hipScale * 0.35
-      );
-      const hips = new THREE.Mesh(hipsGeometry, clothesMaterial);
-      hips.position.y = 0.6 * heightScale;
-      hips.castShadow = true;
-      hips.receiveShadow = true;
-      group.add(hips);
-
-      // LEFT LEG
-      const legLength = (measurements.inseam || 80) / 100;
-      const legGeometry = new THREE.CylinderGeometry(
-        0.16 * heightScale,
-        0.14 * heightScale,
-        legLength,
-        16
-      );
-      const leftLeg = new THREE.Mesh(legGeometry, clothesMaterial);
-      leftLeg.position.set(-hipScale * 0.15, 0.35 * heightScale - legLength / 2, 0);
-      leftLeg.castShadow = true;
-      leftLeg.receiveShadow = true;
-      group.add(leftLeg);
-
-      // RIGHT LEG
-      const rightLeg = new THREE.Mesh(legGeometry, clothesMaterial);
-      rightLeg.position.set(hipScale * 0.15, 0.35 * heightScale - legLength / 2, 0);
-      rightLeg.castShadow = true;
-      rightLeg.receiveShadow = true;
-      group.add(rightLeg);
-
-      // SHOES
-      const shoeGeometry = new THREE.BoxGeometry(
-        0.16 * heightScale * 1.2,
-        0.1 * heightScale,
-        0.25 * heightScale
-      );
-      const shoeMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a1a1a,
-        roughness: 0.7,
-      });
-
-      const leftShoe = new THREE.Mesh(shoeGeometry, shoeMaterial);
-      leftShoe.position.set(-hipScale * 0.15, -0.45 * heightScale, 0.1);
-      leftShoe.castShadow = true;
-      leftShoe.receiveShadow = true;
-      group.add(leftShoe);
-
-      const rightShoe = new THREE.Mesh(shoeGeometry, shoeMaterial);
-      rightShoe.position.set(hipScale * 0.15, -0.45 * heightScale, 0.1);
-      rightShoe.castShadow = true;
-      rightShoe.receiveShadow = true;
-      group.add(rightShoe);
-
-      // WEARABLE OVERLAY (if provided)
-      if (showWearable) {
-        const wearableGeometry = new THREE.BoxGeometry(
-          chestScale * 0.55,
-          heightScale * 0.45,
-          chestScale * 0.08
-        );
-        const wearableMaterial = new THREE.MeshStandardMaterial({
-          color: 0x9333ea,
-          roughness: 0.5,
-          metalness: 0.2,
-          transparent: true,
-          opacity: 0.85,
-        });
-        const wearable = new THREE.Mesh(wearableGeometry, wearableMaterial);
-        wearable.position.y = 1.0 * heightScale;
-        wearable.position.z = chestScale * 0.2;
-        wearable.castShadow = true;
-        wearable.receiveShadow = true;
-        group.add(wearable);
-
-        // Wearable label
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 48px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(showWearable.thumbnail, 128, 128);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        const labelMaterial = new THREE.MeshStandardMaterial({ map: texture });
-        const labelGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.05);
-        const label = new THREE.Mesh(labelGeometry, labelMaterial);
-        label.position.y = 1.0 * heightScale;
-        label.position.z = chestScale * 0.25;
-        group.add(label);
+    // ── Centre & scale loaded object ─────────────────────────────────────────
+    const fitObject = (object) => {
+      const box = new THREE.Box3().setFromObject(object);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      if (maxDim > 0) {
+        const s = 2.0 / maxDim;
+        object.scale.setScalar(s);
+        object.position.x = -center.x * s;
+        object.position.y = -box.min.y * s;
+        object.position.z = -center.z * s;
       }
-
-      return group;
+      object.traverse((child) => {
+        if (!child.isMesh) return;
+        child.castShadow = child.receiveShadow = true;
+        if (child.geometry) child.geometry.computeVertexNormals();
+        // Apply skin material if mesh has no material or default white
+        if (!child.material || child.material.color?.getHex() === 0xffffff) {
+          child.material = defaultSkinMat;
+        }
+      });
+      const newBox = new THREE.Box3().setFromObject(mainGroup);
+      const newCenter = newBox.getCenter(new THREE.Vector3());
+      const newSize = newBox.getSize(new THREE.Vector3());
+      controls.target.set(newCenter.x, newCenter.y * 0.6, newCenter.z);
+      camera.position.set(newCenter.x, newCenter.y * 0.6, newSize.z * 2.5);
+      controls.update();
     };
 
-    const humanGroup = createRealisticHuman();
-    humanGroupRef.current = humanGroup;
-    scene.add(humanGroup);
+    // ── Load OBJ (+MTL if URL provided) ──────────────────────────────────────
+    const loadModel = (objUrl) => {
+      // Derive MTL URL: same folder, "body.mtl"
+      const mtlUrl = objUrl.substring(0, objUrl.lastIndexOf('/') + 1) + 'body.mtl';
 
-    setIsLoading(false);
+      const objLoader = new OBJLoader();
+      const mtlLoader = new MTLLoader();
 
-    // Animation loop
-    let rotationSpeed = 0.005;
-    const animate = () => {
-      animationIdRef.current = requestAnimationFrame(animate);
+      const applyAndAdd = (object) => {
+        mainGroup.clear();
+        mainGroup.add(object);
+        fitObject(object);
+        setIsLoading(false);
+      };
 
-      if (humanGroupRef.current) {
-        humanGroupRef.current.rotation.y += rotationSpeed;
+      // Try MTL first; if it fails (CORS / not found) just load OBJ
+      mtlLoader.load(
+        mtlUrl,
+        (mtl) => {
+          mtl.preload();
+          objLoader.setMaterials(mtl);
+          objLoader.load(objUrl, applyAndAdd,
+            (xhr) => { if (xhr.total > 0) setLoadPct(Math.round(xhr.loaded / xhr.total * 100)); },
+            (err) => {
+              setLoadError("Model load failed – showing preview.");
+              buildParametric(mainGroup, measurements);
+              setIsLoading(false);
+            }
+          );
+        },
+        undefined,
+        () => {
+          // MTL failed – load OBJ with default skin material
+          objLoader.load(
+            objUrl,
+            (object) => {
+              object.traverse((child) => {
+                if (child.isMesh) child.material = defaultSkinMat;
+              });
+              applyAndAdd(object);
+            },
+            (xhr) => { if (xhr.total > 0) setLoadPct(Math.round(xhr.loaded / xhr.total * 100)); },
+            () => {
+              setLoadError("Model load failed – showing preview.");
+              buildParametric(mainGroup, measurements);
+              setIsLoading(false);
+            }
+          );
+        }
+      );
+    };
+
+    // ── Parametric fallback body ──────────────────────────────────────────────
+    const buildParametric = (group, m) => {
+      group.clear();
+      const hR = (m.height || 170) / 170;
+      const chR = (m.chest || 96) / 96;
+      const waR = (m.waist || 80) / 80;
+      const hiR = (m.hips || 98) / 98;
+      const shR = (m.shoulder || 45) / 45;
+      const arR = (m.armLength || 60) / 100;
+      const leR = (m.inseam || 80) / 100;
+
+      const skin = defaultSkinMat.clone();
+
+      // Helper
+      const mesh = (geo, mat, x, y, z, ry = 0) => {
+        const m2 = new THREE.Mesh(geo, mat);
+        m2.position.set(x, y, z);
+        m2.rotation.y = ry;
+        m2.castShadow = m2.receiveShadow = true;
+        group.add(m2);
+        return m2;
+      };
+
+      // Head
+      mesh(new THREE.SphereGeometry(0.38 * hR, 32, 32), skin, 0, 1.68 * hR, 0);
+      // Neck
+      mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.14 * hR, 20), skin, 0, 1.52 * hR, 0);
+      // Torso
+      mesh(new THREE.CylinderGeometry(chR * 0.24, hiR * 0.25, hR * 0.50, 28), skin, 0, 1.0 * hR, 0);
+      // Arms
+      for (const s of [-1, 1]) {
+        const ax = s * shR * 0.32;
+        const upperArm = new THREE.CapsuleGeometry(0.09 * hR, arR * 0.5, 8, 16);
+        const ua = new THREE.Mesh(upperArm, skin);
+        ua.position.set(ax, 1.15 * hR, 0);
+        ua.rotation.z = s * 0.22;
+        ua.castShadow = true;
+        group.add(ua);
+        const lowerArm = new THREE.CapsuleGeometry(0.07 * hR, arR * 0.42, 8, 16);
+        const la = new THREE.Mesh(lowerArm, skin);
+        la.position.set(ax * 1.1, 0.80 * hR, 0);
+        la.rotation.z = s * 0.25;
+        la.castShadow = true;
+        group.add(la);
       }
+      // Legs
+      for (const s of [-1, 1]) {
+        const lx = s * hiR * 0.14;
+        mesh(new THREE.CapsuleGeometry(0.13 * hR, leR * 0.5, 8, 20), skin, lx, 0.35 * hR - leR * 0.5, 0);
+        mesh(new THREE.CapsuleGeometry(0.10 * hR, leR * 0.45, 8, 20), skin, lx, 0.35 * hR - leR * 1.1, 0);
+      }
+      setIsLoading(false);
+    };
 
+    // ── Main load path ────────────────────────────────────────────────────────
+    if (modelUrl && modelUrl.trim()) {
+      loadModel(modelUrl);
+    } else {
+      buildParametric(mainGroup, measurements);
+    }
+
+    // ── Wearable overlay ──────────────────────────────────────────────────────
+    if (showWearable) {
+      const hR = (measurements.height || 170) / 170;
+      const chR = (measurements.chest || 96) / 96;
+      const wGeo = new THREE.BoxGeometry(chR * 0.54, hR * 0.44, 0.08);
+      const wMat = new THREE.MeshPhongMaterial({
+        color: 0x7c3aed, transparent: true, opacity: 0.78,
+      });
+      const wMesh = new THREE.Mesh(wGeo, wMat);
+      wMesh.position.set(0, 1.0 * hR, chR * 0.18);
+      mainGroup.add(wMesh);
+    }
+
+    // ── Animate ───────────────────────────────────────────────────────────────
+    const animate = () => {
+      animationRef.current = requestAnimationFrame(animate);
+      controls.update();
+      if (idleRotation && mainGroup.children.length > 0) {
+        mainGroup.rotation.y += 0.003;
+      }
       renderer.render(scene, camera);
     };
     animate();
 
-    // Handle window resize
-    const handleResize = () => {
-      if (!containerRef.current) return;
-      const width = containerRef.current.clientWidth;
-      const height = containerRef.current.clientHeight;
-
-      camera.aspect = width / height;
+    // ── Resize ────────────────────────────────────────────────────────────────
+    const onResize = () => {
+      const nw = container.clientWidth;
+      const nh = container.clientHeight;
+      camera.aspect = nw / nh;
       camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
+      renderer.setSize(nw, nh);
     };
+    window.addEventListener('resize', onResize);
 
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup
     return () => {
-      window.removeEventListener('resize', handleResize);
-      if (animationIdRef.current) {
-        cancelAnimationFrame(animationIdRef.current);
-      }
-      if (rendererRef.current && containerRef.current) {
-        try {
-          containerRef.current.removeChild(rendererRef.current.domElement);
-        } catch (e) {
-          // Already removed
-        }
-      }
+      window.removeEventListener('resize', onResize);
+      cancelAnimationFrame(animationRef.current);
+      controls.dispose();
       renderer.dispose();
+      try { container.removeChild(renderer.domElement); } catch (_) { }
     };
-  }, [measurements, showWearable]);
+  }, [modelUrl, measurements, showWearable]);
 
   return (
     <div className="relative w-full h-full">
       <div
         ref={containerRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '1rem',
-          overflow: 'hidden',
-          backgroundColor: '#0f1724',
-        }}
+        style={{ width: '100%', height: '100%', borderRadius: '0.75rem', overflow: 'hidden' }}
       />
+
+      {/* Loading */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-2xl">
-          <div className="text-center">
-            <div className="animate-spin text-4xl mb-2">⚡</div>
-            <p className="text-white">Loading Avatar...</p>
-          </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
+          <div className="text-5xl mb-3 animate-spin">⚡</div>
+          <p className="text-white font-medium">Loading 3D Avatar…</p>
+          {loadPct > 0 && loadPct < 100 && (
+            <div className="mt-3 w-44">
+              <div className="w-full bg-gray-700 rounded-full h-1.5">
+                <div className="bg-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${loadPct}%` }} />
+              </div>
+              <p className="text-xs text-gray-400 mt-1 text-center">{loadPct}%</p>
+            </div>
+          )}
         </div>
       )}
-      <div className="absolute bottom-4 right-4 text-xs text-gray-400 bg-black/50 backdrop-blur-sm px-3 py-2 rounded-lg">
-        🔄 360° View
-      </div>
+
+      {/* Error */}
+      {loadError && !isLoading && (
+        <div className="absolute top-2 left-2 right-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs px-3 py-2 rounded-lg">
+          ⚠️ {loadError}
+        </div>
+      )}
+
+      {/* Controls hint */}
+      {!isLoading && (
+        <div className="absolute bottom-3 right-3 flex flex-col items-end gap-1">
+          <span className="text-xs text-gray-500 bg-black/50 px-2 py-1 rounded-md">🖱️ Drag to rotate</span>
+          <span className="text-xs text-gray-500 bg-black/50 px-2 py-1 rounded-md">🔍 Scroll zoom</span>
+        </div>
+      )}
     </div>
   );
 };

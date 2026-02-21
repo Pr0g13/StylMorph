@@ -5,7 +5,7 @@ const Avatar = require("../models/Avatar");
 exports.getAvatar = async (req, res) => {
   try {
     const avatar = await Avatar.findOne({ userId: req.user.id });
-    
+
     if (!avatar) {
       return res.status(404).json({ msg: "Avatar not found" });
     }
@@ -20,41 +20,40 @@ exports.getAvatar = async (req, res) => {
 // Create or update avatar
 exports.saveAvatar = async (req, res) => {
   try {
-    const { measurements, readyPlayerMeUrl, parametricData } = req.body;
+    const { measurements, readyPlayerMeUrl } = req.body;
 
-    // Validate measurements
-    if (!measurements || !measurements.height || !measurements.chest || 
-        !measurements.waist || !measurements.hips || !measurements.shoulder || 
-        !measurements.inseam || !measurements.armLength || !measurements.neckSize) {
-      return res.status(400).json({ msg: "Please provide all body measurements" });
+    if (!measurements || !measurements.height) {
+      return res.status(400).json({ msg: "At least height is required" });
     }
 
-    // Check if avatar exists
+    // Convert string values to numbers
+    const m = {};
+    const fields = ["height", "chest", "waist", "hips", "shoulder", "inseam", "armLength", "neckSize"];
+    for (const f of fields) {
+      if (measurements[f] !== undefined && measurements[f] !== "") {
+        m[f] = parseFloat(measurements[f]) || null;
+      }
+    }
+
     let avatar = await Avatar.findOne({ userId: req.user.id });
 
     if (avatar) {
-      // Update existing avatar
-      avatar.measurements = measurements;
+      avatar.measurements = { ...avatar.measurements, ...m };
       if (readyPlayerMeUrl) avatar.readyPlayerMeUrl = readyPlayerMeUrl;
-      if (parametricData) avatar.parametricData = { ...avatar.parametricData, ...parametricData };
       await avatar.save();
-      
       res.json({ msg: "✅ Avatar updated successfully", avatar });
     } else {
-      // Create new avatar
       avatar = new Avatar({
         userId: req.user.id,
-        measurements,
+        measurements: m,
         readyPlayerMeUrl: readyPlayerMeUrl || null,
-        parametricData: parametricData || {}
       });
       await avatar.save();
-      
       res.status(201).json({ msg: "✅ Avatar created successfully", avatar });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: "Server error", error: err.message });
   }
 };
 
@@ -67,8 +66,8 @@ exports.addWearable = async (req, res) => {
       return res.status(400).json({ msg: "URL and name are required" });
     }
 
-      const avatar = await Avatar.findOne({ userId: req.user.id });
-    
+    const avatar = await Avatar.findOne({ userId: req.user.id });
+
     if (!avatar) {
       return res.status(404).json({ msg: "Avatar not found. Create an avatar first." });
     }
@@ -89,7 +88,7 @@ exports.deleteWearable = async (req, res) => {
     const { wearableId } = req.params;
 
     const avatar = await Avatar.findOne({ userId: req.user.id });
-    
+
     if (!avatar) {
       return res.status(404).json({ msg: "Avatar not found" });
     }
@@ -114,7 +113,7 @@ exports.saveSet = async (req, res) => {
     }
 
     const avatar = await Avatar.findOne({ userId: req.user.id });
-    
+
     if (!avatar) {
       return res.status(404).json({ msg: "Avatar not found" });
     }
@@ -135,7 +134,7 @@ exports.deleteSet = async (req, res) => {
     const { setId } = req.params;
 
     const avatar = await Avatar.findOne({ userId: req.user.id });
-    
+
     if (!avatar) {
       return res.status(404).json({ msg: "Avatar not found" });
     }
