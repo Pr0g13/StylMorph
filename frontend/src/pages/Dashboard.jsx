@@ -7,79 +7,6 @@ import {
 import * as api from '../services/api';
 import RealisticAvatar3D from '../components/RealisticAvatar3D';
 
-// ── Pipeline stages shown during generation ───────────────────────────────────
-const PIPELINE_STAGES = [
-  "📸 Uploading images…",
-  "🤖 Detecting body landmarks (MediaPipe)…",
-  "📐 Extracting measurements from 4 views…",
-  "🧬 Fitting SMPL body model…",
-  "💾 Saving to database…",
-  "☁️  Uploading 3D model to Cloudinary…",
-  "✅ Done!",
-];
-
-// ── Single image drop-zone ────────────────────────────────────────────────────
-const ImageZone = ({ label, emoji, photo, onUpload, onRemove }) => (
-  <div className="relative group/zone">
-    <div
-      className={`aspect-[3/4] rounded-xl border-2 border-dashed overflow-hidden transition-all duration-300 ${photo
-        ? "border-green-500/60 bg-green-500/5"
-        : "border-gray-700 bg-gray-900 hover:border-indigo-500/60 hover:bg-gray-800/50"
-        }`}
-    >
-      {photo ? (
-        <div className="relative w-full h-full">
-          <img src={photo.preview} alt={label} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <div className="absolute top-2 right-2 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shadow">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <button
-            onClick={onRemove}
-            className="absolute top-2 left-2 p-1.5 bg-red-600/80 hover:bg-red-600 rounded-lg backdrop-blur-sm transition-all"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-          <p className="absolute bottom-2 left-2 text-white text-xs font-semibold">{label}</p>
-        </div>
-      ) : (
-        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-          <span className="text-4xl mb-2">{emoji}</span>
-          <span className="text-sm font-medium text-gray-400">{label}</span>
-          <span className="text-xs text-gray-600 mt-1">Click to upload</span>
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => e.target.files[0] && onUpload(e.target.files[0])}
-          />
-        </label>
-      )}
-    </div>
-  </div>
-);
-
-// ── Pipeline progress bar ─────────────────────────────────────────────────────
-const PipelineProgress = ({ stage }) => (
-  <div className="mt-6 bg-gray-900/80 border border-gray-700 rounded-xl p-5">
-    <div className="flex items-center justify-between mb-3">
-      <span className="text-sm font-medium text-indigo-400">Generating 3D Model</span>
-      <span className="text-xs text-gray-400">
-        Step {stage + 1}/{PIPELINE_STAGES.length}
-      </span>
-    </div>
-    <div className="w-full bg-gray-800 rounded-full h-2 mb-3">
-      <div
-        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-700"
-        style={{ width: `${((stage + 1) / PIPELINE_STAGES.length) * 100}%` }}
-      />
-    </div>
-    <p className="text-sm text-gray-300 animate-pulse">{PIPELINE_STAGES[stage]}</p>
-  </div>
-);
-
 // ══════════════════════════════════════════════════════════════════════════════
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -91,15 +18,10 @@ const Dashboard = () => {
     shoulder: '', inseam: '', armLength: '', neckSize: '',
   });
 
-  // 4 photos for SMPL pipeline
-  const [photos, setPhotos] = useState({ front: null, back: null, left: null, right: null });
-  const [heightInput, setHeightInput] = useState('');
-
   const [loading, setLoading] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState(null); // null = hidden
   const [selectedWearable, setSelectedWearable] = useState(null);
   const [wearableInput, setWearableInput] = useState('');
-  const [showRPMModal, setShowRPMModal] = useState(false);
+  const [pifuImage, setPifuImage] = useState(null);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -117,86 +39,6 @@ const Dashboard = () => {
     } catch (err) { console.error("loadAvatar:", err); }
   };
 
-  // ── Photo helpers ───────────────────────────────────────────────────────────
-  const setPhoto = (key, file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () =>
-      setPhotos((p) => ({ ...p, [key]: { file, preview: reader.result } }));
-    reader.readAsDataURL(file);
-  };
-  const removePhoto = (key) => setPhotos((p) => ({ ...p, [key]: null }));
-
-  // ── Generate SMPL avatar ────────────────────────────────────────────────────
-  const handleGenerateAvatar = async () => {
-    const { front, back, left, right } = photos;
-    if (!front || !back || !left || !right) {
-      alert("Please upload all 4 photos (front, back, left, right).");
-      return;
-    }
-    if (!heightInput || isNaN(parseFloat(heightInput))) {
-      alert("Please enter your height in centimetres.");
-      return;
-    }
-
-    setLoading(true);
-    setPipelineStage(0);
-
-    try {
-      const formData = new FormData();
-      formData.append("height", heightInput);
-      formData.append("front", front.file);
-      formData.append("back", back.file);
-      formData.append("left", left.file);
-      formData.append("right", right.file);
-
-      // Simulate stage ticks while waiting for backend
-      let stage = 0;
-      const tick = setInterval(() => {
-        stage = Math.min(stage + 1, PIPELINE_STAGES.length - 2);
-        setPipelineStage(stage);
-      }, 3500);
-
-      const result = await api.generateSMPLAvatar(formData);
-      clearInterval(tick);
-      setPipelineStage(PIPELINE_STAGES.length - 1);
-
-      if (!result.success) throw new Error(result.error || "Generation failed");
-
-      // Merge measurements into local state
-      const m = result.measurements;
-      setMeasurements({
-        height: m.height || '',
-        chest: m.chest || '',
-        waist: m.waist || '',
-        hips: m.hips || '',
-        shoulder: m.shoulder || '',
-        inseam: m.inseam || '',
-        armLength: m.armLength || '',
-        neckSize: m.neckSize || '',
-      });
-
-      // Update avatar in local state with new model URL
-      setAvatar((prev) => ({
-        ...(prev || {}),
-        measurements: m,
-        smplModelUrl: result.modelUrl,
-      }));
-
-      setTimeout(() => {
-        setPipelineStage(null);
-        setActiveTab('home');
-      }, 1500);
-
-    } catch (err) {
-      setPipelineStage(null);
-      alert("Failed to generate avatar:\n" + err.message);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // ── Manual measurement save ─────────────────────────────────────────────────
   const handleMeasurementSubmit = async () => {
     if (Object.values(measurements).some((v) => !v)) {
@@ -212,6 +54,28 @@ const Dashboard = () => {
       alert(err.message || "Failed to save");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── 3D Upload ───────────────────────────────────────────────────────────
+  const handlePifuSubmit = async (e) => {
+    e.preventDefault();
+    if (!pifuImage) {
+      alert("Please select an image first!");
+      return;
+    }
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", pifuImage);
+      const result = await api.generateModels(formData);
+      alert(result.msg || "3D Model Generated!");
+      await loadAvatar();
+    } catch (err) {
+      alert(err.message || "Failed to generate PIFuHD model");
+    } finally {
+      setLoading(false);
+      setPifuImage(null);
     }
   };
 
@@ -262,11 +126,8 @@ const Dashboard = () => {
   };
 
   // Determine the model URL to show in Three.js
-  const modelUrl = avatar?.smplModelUrl || avatar?.modelUrl || null;
+  const modelUrl = avatar?.pifuhdUrl || avatar?.modelUrl || null;
 
-  // Check how many photos are uploaded
-  const photoCount = Object.values(photos).filter(Boolean).length;
-  const allPhotosReady = photoCount === 4;
 
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
@@ -345,16 +206,19 @@ const Dashboard = () => {
               <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-indigo-600/50 transition-all duration-300">
                 {avatar ? (
                   <div>
-                    <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2">
-                      <User className="w-6 h-6 text-indigo-400" />
-                      <span>Your 3D Avatar</span>
-                      {modelUrl && <span className="ml-2 text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full">SMPL Model</span>}
+                    <h2 className="text-2xl font-bold mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center space-x-2">
+                        <User className="w-6 h-6 text-indigo-400" />
+                        <span>Your 3D Avatar</span>
+                        {modelUrl && avatar?.pifuhdUrl === modelUrl && <span className="ml-2 text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-full hidden sm:inline-block">PIFuHD</span>}
+                      </div>
+
                     </h2>
                     <div className="h-[500px] rounded-xl overflow-hidden">
                       <RealisticAvatar3D
                         measurements={measurements}
                         showWearable={selectedWearable}
-                        modelUrl={avatar?.smplModelUrl}
+                        modelUrl={modelUrl}
                       />
                     </div>
                     <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -376,9 +240,9 @@ const Dashboard = () => {
                     <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center">
                       <Ruler className="w-12 h-12" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-4">Build Your 3D Avatar</h2>
+                    <h2 className="text-3xl font-bold mb-4">Build Your Photorealistic Avatar</h2>
                     <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                      Upload 4 body photos and we'll generate a personalised SMPL 3D model with accurate measurements.
+                      Generate a 1:1 photorealistic digital twin from a single photo.
                     </p>
                     <button
                       onClick={() => setActiveTab('avatar')}
@@ -415,82 +279,47 @@ const Dashboard = () => {
           <div className="p-8 animate-fade-in">
             <div className="grid lg:grid-cols-2 gap-8">
 
-              {/* Left: 4-image upload + generate */}
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 rounded-2xl blur-3xl transition-all duration-500" />
-                <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-cyan-600/50 transition-all duration-300">
-
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold flex items-center space-x-2 mb-1">
-                      <Camera className="w-6 h-6 text-cyan-400" />
-                      <span>Upload 4 Body Photos</span>
-                    </h2>
-                    <p className="text-gray-400 text-sm">
-                      We use all 4 views for more accurate measurements.
-                      Wear fitted clothes, stand straight against a plain background.
-                    </p>
+              <div className="space-y-6 lg:col-span-2">
+                <div className="relative group max-w-2xl mx-auto">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-pink-600/30 rounded-2xl blur-3xl transition-all duration-500" />
+                  <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-purple-600/50 transition-all duration-300">
+                    <div className="mb-6 text-center">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                        <Upload className="w-8 h-8 text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold mb-2">Upload Photo for 3D Avatar</h2>
+                      <p className="text-gray-400 text-sm max-w-sm mx-auto">
+                        Upload a clear, full-body image of yourself to generate a 3D digital twin.
+                      </p>
+                    </div>
+                    <form onSubmit={handlePifuSubmit} className="space-y-4">
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-700 border-dashed rounded-xl cursor-pointer bg-black/50 hover:bg-black hover:border-purple-500 transition-all">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-500">
+                              <span className="font-semibold text-purple-400">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">{pifuImage ? pifuImage.name : "PNG, JPG up to 10MB"}</p>
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => setPifuImage(e.target.files[0])}
+                          />
+                        </label>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={loading || !pifuImage}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold hover:shadow-lg hover:shadow-purple-600/50 transition-all duration-300 flex items-center justify-center space-x-2 active:scale-95 disabled:opacity-50"
+                      >
+                        <Zap className="w-5 h-5" />
+                        <span>{loading ? "Generating Model..." : "Generate 3D Avatar"}</span>
+                      </button>
+                    </form>
                   </div>
-
-                  {/* 2×2 photo grid */}
-                  <div className="grid grid-cols-2 gap-3 mb-5">
-                    {[
-                      { key: 'front', label: 'Front', emoji: '🧍' },
-                      { key: 'back', label: 'Back', emoji: '🔙' },
-                      { key: 'left', label: 'Left Side', emoji: '👈' },
-                      { key: 'right', label: 'Right Side', emoji: '👉' },
-                    ].map(({ key, label, emoji }) => (
-                      <ImageZone
-                        key={key}
-                        label={label}
-                        emoji={emoji}
-                        photo={photos[key]}
-                        onUpload={(f) => setPhoto(key, f)}
-                        onRemove={() => removePhoto(key)}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Photo counter */}
-                  <div className="flex items-center gap-2 mb-5">
-                    {[0, 1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${i < photoCount ? 'bg-gradient-to-r from-cyan-500 to-blue-500' : 'bg-gray-700'
-                          }`}
-                      />
-                    ))}
-                    <span className="text-xs text-gray-400 ml-1">{photoCount}/4</span>
-                  </div>
-
-                  {/* Height input */}
-                  <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">📏 Your Height (cm)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 175"
-                      value={heightInput}
-                      onChange={(e) => setHeightInput(e.target.value)}
-                      min={100}
-                      max={230}
-                      className="w-full px-4 py-3 bg-black border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:shadow-lg focus:shadow-cyan-600/20 transition-all duration-300"
-                    />
-                  </div>
-
-                  {/* Generate button */}
-                  <button
-                    onClick={handleGenerateAvatar}
-                    disabled={loading || !allPhotosReady || !heightInput}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-semibold hover:shadow-lg hover:shadow-cyan-600/50 transition-all duration-300 flex items-center justify-center space-x-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Zap className="w-5 h-5" />
-                    <span>{loading ? 'Generating…' : 'Generate 3D Avatar'}</span>
-                    {!loading && allPhotosReady && heightInput && (
-                      <ChevronRight className="w-5 h-5" />
-                    )}
-                  </button>
-
-                  {/* Pipeline progress */}
-                  {pipelineStage !== null && <PipelineProgress stage={pipelineStage} />}
                 </div>
               </div>
 
@@ -540,23 +369,7 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Ready Player Me */}
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-pink-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                  <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-6 group-hover:border-purple-600/30 transition-all duration-300">
-                    <h4 className="font-semibold mb-2 flex items-center space-x-2">
-                      <Zap className="w-4 h-4 text-purple-400" />
-                      <span>Advanced: Ready Player Me</span>
-                    </h4>
-                    <p className="text-sm text-gray-400 mb-4">Create a photorealistic avatar using Ready Player Me</p>
-                    <button
-                      onClick={() => setShowRPMModal(true)}
-                      className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-all"
-                    >
-                      Open Ready Player Me
-                    </button>
-                  </div>
-                </div>
+
               </div>
             </div>
           </div>
@@ -724,18 +537,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* ── Ready Player Me Modal ──────────────────────────────────────────── */}
-      {showRPMModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
-          <div className="relative bg-gray-950 rounded-2xl w-full max-w-4xl h-[80vh] border border-gray-800 shadow-2xl overflow-hidden">
-            <button onClick={() => setShowRPMModal(false)} className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white bg-black/50 backdrop-blur-sm p-2 rounded-lg">
-              <X className="w-6 h-6" />
-            </button>
-            <iframe src="https://demo.readyplayer.me/avatar?frameApi" className="w-full h-full" allow="camera *; microphone *" />
-          </div>
-        </div>
-      )}
-
       <style>{`
         @keyframes fade-in { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         .animate-fade-in { animation: fade-in 0.5s ease-out; }
@@ -743,7 +544,7 @@ const Dashboard = () => {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
       `}</style>
-    </div>
+    </div >
   );
 };
 

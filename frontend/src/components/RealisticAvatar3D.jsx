@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 /**
@@ -132,8 +133,19 @@ const RealisticAvatar3D = ({ measurements = {}, showWearable = null, modelUrl = 
         if (!child.isMesh) return;
         child.castShadow = child.receiveShadow = true;
         if (child.geometry) child.geometry.computeVertexNormals();
-        // Apply skin material if mesh has no material or default white
-        if (!child.material || child.material.color?.getHex() === 0xffffff) {
+
+        // Check if TripoSR provided vertex colors
+        const hasVertexColors = child.geometry && child.geometry.attributes && child.geometry.attributes.color;
+
+        if (hasVertexColors) {
+          // If it has vertex colors (like from PIFuHD normal mapping), ignore them to render white
+          child.material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.7,
+            metalness: 0.1,
+            side: THREE.DoubleSide
+          });
+        } else if (!child.material || child.material.color?.getHex() === 0xffffff) {
           child.material = defaultSkinMat;
         }
       });
@@ -145,14 +157,8 @@ const RealisticAvatar3D = ({ measurements = {}, showWearable = null, modelUrl = 
       controls.update();
     };
 
-    // ── Load OBJ (+MTL if URL provided) ──────────────────────────────────────
-    const loadModel = (objUrl) => {
-      // Derive MTL URL: same folder, "body.mtl"
-      const mtlUrl = objUrl.substring(0, objUrl.lastIndexOf('/') + 1) + 'body.mtl';
-
-      const objLoader = new OBJLoader();
-      const mtlLoader = new MTLLoader();
-
+    // ── Load GLB/OBJ ──────────────────────────────────────
+    const loadModel = (url) => {
       const applyAndAdd = (object) => {
         mainGroup.clear();
         mainGroup.add(object);
@@ -160,41 +166,65 @@ const RealisticAvatar3D = ({ measurements = {}, showWearable = null, modelUrl = 
         setIsLoading(false);
       };
 
-      // Try MTL first; if it fails (CORS / not found) just load OBJ
-      mtlLoader.load(
-        mtlUrl,
-        (mtl) => {
-          mtl.preload();
-          objLoader.setMaterials(mtl);
-          objLoader.load(objUrl, applyAndAdd,
-            (xhr) => { if (xhr.total > 0) setLoadPct(Math.round(xhr.loaded / xhr.total * 100)); },
-            (err) => {
-              setLoadError("Model load failed – showing preview.");
-              buildParametric(mainGroup, measurements);
-              setIsLoading(false);
-            }
-          );
-        },
-        undefined,
-        () => {
-          // MTL failed – load OBJ with default skin material
-          objLoader.load(
-            objUrl,
-            (object) => {
-              object.traverse((child) => {
-                if (child.isMesh) child.material = defaultSkinMat;
-              });
-              applyAndAdd(object);
-            },
-            (xhr) => { if (xhr.total > 0) setLoadPct(Math.round(xhr.loaded / xhr.total * 100)); },
-            () => {
-              setLoadError("Model load failed – showing preview.");
-              buildParametric(mainGroup, measurements);
-              setIsLoading(false);
-            }
-          );
-        }
-      );
+      if (url.toLowerCase().endsWith('.glb') || url.toLowerCase().endsWith('.gltf') || url.includes('avaturn')) {
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.load(
+          url,
+          (gltf) => { applyAndAdd(gltf.scene); },
+          (xhr) => { if (xhr.total > 0) setLoadPct(Math.round((xhr.loaded / xhr.total) * 100)); },
+          (err) => {
+            console.error(err);
+            setLoadError("GLB load failed – showing preview.");
+            buildParametric(mainGroup, measurements);
+            setIsLoading(false);
+          }
+        );
+      } else {
+        // Fallback for OBJ Models
+        const mtlUrl = url.substring(0, url.lastIndexOf('/') + 1) + 'body.mtl';
+        const objLoader = new OBJLoader();
+        const mtlLoader = new MTLLoader();
+
+        // 1. Try to load MTL first
+        mtlLoader.load(
+          mtlUrl,
+          (mtl) => {
+            // Success: apply materials and load OBJ
+            mtl.preload();
+            objLoader.setMaterials(mtl);
+            objLoader.load(url, applyAndAdd,
+              (xhr) => { if (xhr.total > 0) setLoadPct(Math.round((xhr.loaded / xhr.total) * 100)); },
+              (err) => {
+                console.error("OBJ load failed after MTL success:", err);
+                setLoadError("Model geometry failed to load.");
+                buildParametric(mainGroup, measurements);
+                setIsLoading(false);
+              }
+            );
+          },
+          undefined,
+          (err) => {
+            // Failure: MTL not found or error, fall back to pure OBJ
+            console.warn("MTL not found or failed to load. Falling back to default skin material.", err);
+            objLoader.load(
+              url,
+              (object) => {
+                object.traverse((child) => {
+                  if (child.isMesh) child.material = defaultSkinMat;
+                });
+                applyAndAdd(object);
+              },
+              (xhr) => { if (xhr.total > 0) setLoadPct(Math.round((xhr.loaded / xhr.total) * 100)); },
+              (objErr) => {
+                console.error("Pure OBJ load failed:", objErr);
+                setLoadError("Model failed to load entirely.");
+                buildParametric(mainGroup, measurements);
+                setIsLoading(false);
+              }
+            );
+          }
+        );
+      }
     };
 
     // ── Parametric fallback body ──────────────────────────────────────────────

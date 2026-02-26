@@ -75,17 +75,11 @@ export const deleteSet = async (setId) => {
   return res.json();
 };
 
-// ── SMPL 3D Body Generation ───────────────────────────────────────────────────
-/**
- * Upload 4 body images + height to generate a personalised SMPL 3D avatar.
- *
- * @param {FormData} formData  Fields: front, back, left, right (File), height (string)
- * @returns {{ success, measurements, modelUrl }}
- */
-export const generateSMPLAvatar = async (formData) => {
-  const res = await fetch(`${API_URL}/api/measurements/calculate`, {
+// ── 3D Model Generation (PIFuHD) ──────────────────────────────────────────
+export const generateModels = async (formData) => {
+  const res = await fetch(`${API_URL}/avatar/generate`, {
     method: "POST",
-    headers: { ...authHeader() }, // Do NOT set Content-Type – let browser set multipart boundary
+    headers: { ...authHeader() }, // Let browser set multipart boundary
     body: formData,
   });
 

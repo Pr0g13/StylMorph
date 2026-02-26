@@ -1,5 +1,8 @@
-// src/controllers/avatar.js
 const Avatar = require("../models/Avatar");
+const { uploadImage, uploadSmplObj } = require("../config/cloudinary");
+const { exec } = require("child_process");
+const path = require("path");
+const fs = require("fs");
 
 // Get user's avatar
 exports.getAvatar = async (req, res) => {
@@ -146,5 +149,92 @@ exports.deleteSet = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Server error" });
+  }
+};
+
+// Generate Both SAM 3D & PIFuHD Models
+exports.generateModels = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ msg: "No image provided" });
+    }
+
+    const imagePath = req.file.path;
+    console.log(`[Model Generation] Uploaded image size: ${req.file.size} bytes`);
+
+    // 1. Upload image to Cloudinary
+    console.log("[Model Generation] Uploading image to Cloudinary...");
+    let imageUrl;
+    try {
+      imageUrl = await uploadImage(imagePath);
+      console.log(`[Model Generation] Image uploaded: ${imageUrl}`);
+    } catch (uploadErr) {
+      console.warn(`[Model Generation] Cloudinary image upload failed. Error: ${uploadErr.message}`);
+    }
+
+    // Prepare paths
+    const pifuOutputPath = path.resolve(__dirname, "../../temp", `pifuhd_${Date.now()}.obj`);
+    const pifuScriptPath = path.resolve(__dirname, "../../../ml/Pifu/run_pifuhd.py");
+
+    const tempDir = path.join(__dirname, "../../temp");
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    // 2. Run PIFuHD
+    let pifuhdUrl = null;
+    console.log(`[Model Generation] Executing PIFuHD script...`);
+    try {
+      await new Promise((resolve, reject) => {
+        const pythonCmd = `python "${pifuScriptPath}" "${imagePath}" "${pifuOutputPath}"`;
+        exec(pythonCmd, { maxBuffer: 1024 * 1024 * 50 }, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`[PIFuHD Error] ${error.message}`);
+            return reject(error);
+          }
+          resolve();
+        });
+      });
+      // Upload PIFuHD
+      console.log("[Model Generation] Uploading PIFuHD model to Cloudinary...");
+      try {
+        pifuhdUrl = await uploadSmplObj(pifuOutputPath);
+      } catch (err) {
+        console.warn(`[PIFuHD Upload] Failed. Error: ${err.message}`);
+      }
+    } catch (err) {
+      console.error("[Model Generation] PIFuHD execution failed:", err.message);
+    }
+
+    // 3. Update the Avatar document
+    let avatar = await Avatar.findOne({ userId: req.user.id });
+    if (!avatar) {
+      avatar = new Avatar({
+        userId: req.user.id,
+      });
+    }
+
+    // Set URL only if successfully generated
+    if (pifuhdUrl) avatar.pifuhdUrl = pifuhdUrl;
+
+    await avatar.save();
+
+    // 4. Cleanup temporary files
+    try {
+      if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+      if (fs.existsSync(pifuOutputPath)) fs.unlinkSync(pifuOutputPath);
+    } catch (cleanupErr) {
+      console.warn(`[Model Generation] Cleanup warning: ${cleanupErr.message}`);
+    }
+
+    res.json({
+      msg: "✅ Model generated successfully",
+      pifuhdUrl,
+      avatar,
+      pifuhdSuccess: !!pifuhdUrl
+    });
+  } catch (err) {
+    console.error("[Model Generation] Server error:", err);
+    res.status(500).json({ msg: "Server error during 3D generation", error: err.message });
   }
 };
