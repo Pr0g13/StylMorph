@@ -5,13 +5,13 @@
 
 <h2>Project Overview</h2>  
 
-**STYLMORPH** is a next-generation 3D virtual try-on platform designed to revolutionize the online fashion shopping experience. It allows the users to generate realistic 3D avatars of themselves by entering their body measurements such as height, weight, and body shape. These avatars act as digital twins, enabling users to virtually try on clothing items sourced from various e-commerce platforms. By simply pasting a product link, the garment is accurately mapped onto the user’s 3D model, providing a highly personalized and immersive shopping experience. Unlike traditional e-commerce platforms that rely on static 2D images or generic avatars, STYLMORPH delivers **true-to-body visualization**, bridging the gap between digital browsing and real-world fitting.  
+""STYLMORPH"" is a next-generation 3D virtual try-on platform designed to revolutionize the online fashion shopping experience. It allows the users to generate realistic 3D avatars of themselves by entering their body measurements such as height, weight, and body shape. These avatars act as digital twins, enabling users to virtually try on clothing items sourced from various e-commerce platforms. By simply pasting a product link, the garment is accurately mapped onto the user’s 3D model, providing a highly personalized and immersive shopping experience. Unlike traditional e-commerce platforms that rely on static 2D images or generic avatars, STYLMORPH delivers **true-to-body visualization**, bridging the gap between digital browsing and real-world fitting.  
 
 ---
 
 <h2>Problem in Current Systems</h2>  
 
-Online fashion retail faces a persistent issue: customers are often unable to see how a product will actually look and fit on their own body. As a result, many users experience confusion and dissatisfaction when clothing does not meet expectations. High return rates add to operational costs for businesses, while customer trust declines, reducing loyalty and repeat sales. These issues make online shopping less efficient, more frustrating, and costly for both customers and retailers.  
+Online fashion retail faces a persistent issue: customers are  unable to see how a product will actually look and fit on their own body. As a result, many users experience confusion and dissatisfaction when clothing does not meet expectations. High return rates add to operational costs for businesses, while customer trust declines, reducing loyalty and repeat sales. These issues make online shopping less efficient, more frustrating, and costly for both customers and retailers.  
 
 ---
 
