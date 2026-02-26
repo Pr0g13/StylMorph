@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const model3DSchema = new mongoose.Schema({
   userId: String,
   modelUrl: String,
+  textureUrl: String,
+  inputImage: String,
   createdAt: { type: Date, default: Date.now }
 });
 

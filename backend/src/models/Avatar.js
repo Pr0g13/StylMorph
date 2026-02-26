@@ -2,9 +2,9 @@
 const mongoose = require("mongoose");
 
 const AvatarSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "User", 
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
     unique: true // Each user can have only one active avatar
   },
@@ -19,6 +19,8 @@ const AvatarSchema = new mongoose.Schema({
     neckSize: { type: Number, required: true }
   },
   readyPlayerMeUrl: { type: String, default: null }, // Store RPM avatar URL
+  modelUrl: { type: String, default: null }, // Store PiFuHD generated 3D model URL
+  textureUrl: { type: String, default: null }, // Texture image mapped to 3D model
   parametricData: {
     bodyType: { type: String, default: "average" }, // ectomorph, mesomorph, endomorph
     muscleDefinition: { type: Number, default: 0.5, min: 0, max: 1 },
@@ -47,7 +49,7 @@ const AvatarSchema = new mongoose.Schema({
 AvatarSchema.index({ userId: 1 });
 
 // Update the updatedAt timestamp on save
-AvatarSchema.pre('save', function(next) {
+AvatarSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });

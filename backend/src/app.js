@@ -16,15 +16,15 @@ const app = express();
 // Connect to database (if you have one)
 try {
   connectDB();
-  console.log("✅ Connected to database");
+  console.log("✅ Connected to database");~
 } catch (err) {
   console.log("⚠️ Database connection failed:", err.message);
 }
 
 // Create temp directories
 const tempDirs = [
-  path.join(__dirname, "temp/inputs"),
-  path.join(__dirname, "temp/outputs")
+  path.join(__dirname, "../temp/inputs"),
+  path.join(__dirname, "../temp/outputs")
 ];
 
 tempDirs.forEach(dir => {
@@ -39,15 +39,26 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  if (req.originalUrl.includes('/api/pifu')) {
+    const logData = `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}\nHeaders: ${JSON.stringify(req.headers)}\n\n`;
+    fs.appendFileSync(path.join(__dirname, "../request.log"), logData);
+  }
+  next();
+});
+
 // Routes
 app.use("/auth", authRoutes);
 app.use("/avatar", avatarRoutes);
 app.use("/api/pifu", pifuRoutes);
 
+// Serve static files from temp directory
+app.use("/temp", express.static(path.join(__dirname, "../temp")));
+
 // Health check
 app.get("/", (req, res) => {
-  res.json({ 
-    ok: true, 
+  res.json({
+    ok: true,
     message: "StylMorph API",
     timestamp: new Date().toISOString(),
     endpoints: [
@@ -87,11 +98,21 @@ app.use((req, res, next) => {
 });
 
 // Error handler
+// Error handler
 app.use((err, req, res, next) => {
+  const errorLog = `Timestamp: ${new Date().toISOString()}\nGlobal Error: ${err.message}\nStack: ${err.stack}\n\n`;
+  try {
+    fs.appendFileSync(path.join(__dirname, "../server_error.log"), errorLog);
+  } catch (e) {
+    console.error("Could not write server error log:", e);
+  }
+
   console.error("❌ Server error:", err);
   res.status(500).json({
     success: false,
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    error: err.message, // Send actual error message
+    stack: err.stack,   // Send stack trace
+    env: process.env.NODE_ENV // Debug env
   });
 });
 

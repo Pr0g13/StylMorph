@@ -15,4 +15,12 @@ const uploadObj = async (filePath) => {
   return result.secure_url;
 };
 
-module.exports = { uploadObj };
+const uploadImage = async (filePath) => {
+  const result = await cloudinary.uploader.upload(filePath, {
+    folder: "pifuhd_textures",
+  });
+
+  return result.secure_url;
+};
+
+module.exports = { uploadObj, uploadImage };

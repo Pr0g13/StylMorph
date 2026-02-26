@@ -9,6 +9,7 @@ const {
   saveSet,
   deleteSet
 } = require("../controllers/avatar");
+const { addWearableFromUrl } = require("../controllers/wearables.controller");
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ const router = express.Router();
 router.get("/", auth, getAvatar);
 router.post("/", auth, saveAvatar);
 router.post("/wearables", auth, addWearable);
+router.post("/wearables/url", auth, addWearableFromUrl);
 router.delete("/wearables/:wearableId", auth, deleteWearable);
 router.post("/sets", auth, saveSet);
 router.delete("/sets/:setId", auth, deleteSet);

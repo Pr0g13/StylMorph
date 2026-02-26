@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';  
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Camera, Sparkles, Zap, ShoppingBag, User, X, Mail, Lock, ArrowRight, Play } from 'lucide-react';
 
 const StylMorphHomepage = () => {
@@ -9,7 +9,6 @@ const StylMorphHomepage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [signupData, setSignupData] = useState({ username: '', email: '', password: '' });
-  const videoRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,72 +18,56 @@ const StylMorphHomepage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-const [user, setUser] = useState(null);
+  // user state removed since it wasn't used on homepage
 
-useEffect(() => {
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  if (storedUser) setUser(storedUser);
-}, []);
+  const handleLogin = async () => {
+    if (!loginData.username || !loginData.password) {
+      alert("Please fill in all fields");
+      return;
+    }
 
-const handleLogin = async () => {
-  if (!loginData.username || !loginData.password) {
-    alert("Please fill in all fields");
-    return;
-  }
+    setIsLoading(true);
+    try {
+      const res = await axios.post("http://localhost:5000/auth/login", loginData);
 
-  setIsLoading(true);
-  try {
-    const res = await axios.post("http://localhost:5000/auth/login", loginData);
+      // Save token
+      localStorage.setItem("token", res.data.token);
 
-    // Save token
-    localStorage.setItem("token", res.data.token);
+      // Save user info for homepage display
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
-    // Save user info for homepage display
-    localStorage.setItem("user", JSON.stringify(res.data.user));
+      alert("Login successful!");
+      setShowLogin(false);
+      setLoginData({ username: "", password: "" });
 
-    alert("Login successful!");
-    setShowLogin(false);
-    setLoginData({ username: "", password: "" });
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
+    } catch (err) {
+      alert(err.response?.data?.msg || "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    // Optionally update state to show username immediately
-    // setUser(res.data.user);
+  const handleSignup = async () => {
+    if (!signupData.username || !signupData.email || !signupData.password) {
+      alert("Please fill in all fields");
+      return;
+    }
 
-    // Redirect to dashboard
-    window.location.href = "/dashboard"; 
-  } catch (err) {
-    alert(err.response?.data?.msg || "Login failed");
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setIsLoading(true);
+    try {
+      const res = await axios.post("http://localhost:5000/auth/signup", signupData);
+      alert(res.data.msg);
 
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  setUser(null);
-  window.location.reload();
-};
-
-
-const handleSignup = async () => {
-  if (!signupData.username || !signupData.email || !signupData.password) {
-    alert("Please fill in all fields");
-    return;
-  }
-
-  setIsLoading(true);
-  try {
-    const res = await axios.post("http://localhost:5000/auth/signup", signupData);
-    alert(res.data.msg);
-
-    setShowSignup(false);
-    setSignupData({ username: "", email: "", password: "" });
-  } catch (err) {
-    alert(err.response?.data?.msg || "Signup failed");
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setShowSignup(false);
+      setSignupData({ username: "", email: "", password: "" });
+    } catch (err) {
+      alert(err.response?.data?.msg || "Signup failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="relative min-h-screen bg-black text-white">
       {/* Header */}
@@ -96,7 +79,7 @@ const handleSignup = async () => {
             </div>
             <span className="text-2xl font-semibold tracking-tight">StylMorph</span>
           </div>
-          
+
           <div className="hidden md:flex items-center space-x-10">
             <a href="#features" className="text-sm text-gray-300 hover:text-white transition-colors">Features</a>
             <a href="#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors">How it Works</a>
@@ -116,7 +99,7 @@ const handleSignup = async () => {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-black to-purple-950 opacity-50" />
-        
+
         {/* Animated Grid */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute inset-0" style={{
@@ -150,7 +133,7 @@ const handleSignup = async () => {
               <span>Create Your Avatar</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-            
+
             <button className="px-8 py-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg font-medium hover:bg-white/10 transition-all duration-300 flex items-center space-x-2">
               <Play className="w-5 h-5" />
               <span>Watch Demo</span>
@@ -166,7 +149,7 @@ const handleSignup = async () => {
                 <div className="relative w-64 h-96">
                   {/* Scanning Effect */}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent animate-pulse" />
-                  
+
                   {/* Human Silhouette */}
                   <svg viewBox="0 0 200 400" className="w-full h-full filter drop-shadow-2xl">
                     <defs>
@@ -175,28 +158,28 @@ const handleSignup = async () => {
                         <stop offset="100%" stopColor="#a855f7" stopOpacity="0.8" />
                       </linearGradient>
                       <filter id="glow">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                         <feMerge>
-                          <feMergeNode in="coloredBlur"/>
-                          <feMergeNode in="SourceGraphic"/>
+                          <feMergeNode in="coloredBlur" />
+                          <feMergeNode in="SourceGraphic" />
                         </feMerge>
                       </filter>
                     </defs>
-                    
+
                     {/* Head */}
                     <ellipse cx="100" cy="50" rx="25" ry="30" fill="url(#bodyGrad)" filter="url(#glow)" />
-                    
+
                     {/* Torso */}
                     <path d="M 75 80 Q 100 75 125 80 L 120 200 Q 100 205 80 200 Z" fill="url(#bodyGrad)" filter="url(#glow)" />
-                    
+
                     {/* Arms */}
                     <line x1="75" y1="100" x2="50" y2="180" stroke="url(#bodyGrad)" strokeWidth="12" strokeLinecap="round" filter="url(#glow)" />
                     <line x1="125" y1="100" x2="150" y2="180" stroke="url(#bodyGrad)" strokeWidth="12" strokeLinecap="round" filter="url(#glow)" />
-                    
+
                     {/* Legs */}
                     <line x1="85" y1="200" x2="85" y2="350" stroke="url(#bodyGrad)" strokeWidth="16" strokeLinecap="round" filter="url(#glow)" />
                     <line x1="115" y1="200" x2="115" y2="350" stroke="url(#bodyGrad)" strokeWidth="16" strokeLinecap="round" filter="url(#glow)" />
-                    
+
                     {/* Measurement Lines */}
                     <line x1="60" y1="120" x2="140" y2="120" stroke="#22d3ee" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
                     <line x1="60" y1="180" x2="140" y2="180" stroke="#22d3ee" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />

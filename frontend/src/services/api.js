@@ -22,13 +22,13 @@ export const uploadPhoto = async (formData) => {
   const endpoint = `${API_URL}/api/pifu/generate`;
 
   console.log("🔄 Uploading to:", endpoint);
-  
+
   // Log FormData contents
   console.log("📁 FormData entries:");
   for (let pair of formData.entries()) {
     console.log(`  ${pair[0]}:`, pair[1]);
   }
-  
+
   console.log("🔑 Token:", token ? "Present" : "Missing");
 
   try {
@@ -42,16 +42,16 @@ export const uploadPhoto = async (formData) => {
     });
 
     console.log("📤 Response status:", res.status, res.statusText);
-    
+
     const responseText = await res.text();
     console.log("📤 Response body:", responseText);
-    
+
     if (!res.ok) {
       throw new Error(`Upload failed (${res.status}): ${responseText}`);
     }
-    
+
     return JSON.parse(responseText);
-    
+
   } catch (error) {
     console.error("❌ Upload error:", error);
     throw error;
@@ -116,6 +116,19 @@ export const addWearable = async (url, name, thumbnail) => {
       "Authorization": `Bearer ${token}`
     },
     body: JSON.stringify({ url, name, thumbnail })
+  });
+  return res.json();
+};
+
+export const addWearableFromUrl = async (url, name, type) => {
+  const token = getAuthToken();
+  const res = await fetch(`${API_URL}/avatar/wearables/url`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ url, name, type })
   });
   return res.json();
 };

@@ -1,6 +1,7 @@
 // backend/src/routes/pifu.routes.js
 const express = require("express");
 const upload = require("../middleware/upload");
+const auth = require("../middleware/auth");
 const { runPifuHD } = require("../controllers/pifu.controller");
 
 const router = express.Router();
@@ -15,6 +16,6 @@ router.get("/", (req, res) => {
 });
 
 // Generate 3D model - IMPORTANT: field name must match frontend
-router.post("/generate", upload.single("photo"), runPifuHD);
+router.post("/generate", auth, upload.single("photo"), runPifuHD);
 
 module.exports = router;

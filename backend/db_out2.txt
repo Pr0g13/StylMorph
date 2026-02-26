@@ -1,0 +1,35 @@
+﻿[dotenv@17.2.3] injecting env (4) from .env -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
+MongoDB connected...
+Connected to DB
+Latest Avatar:
+{
+  measurements: {
+    height: 170,
+    chest: 100,
+    waist: 80,
+    hips: 90,
+    shoulder: 45,
+    inseam: 80,
+    armLength: 60,
+    neckSize: 35
+  },
+  parametricData: { bodyType: 'average', muscleDefinition: 0.5, bodyFat: 0.5 },
+  _id: new ObjectId('699de17c5027810eb0ea3798'),
+  userId: new ObjectId('699de09d4f99ff16977ab3c4'),
+  readyPlayerMeUrl: null,
+  modelUrl: '/temp/outputs/pifuhd_final/recon/result_test_512.obj',
+  wearables: [],
+  savedSets: [],
+  createdAt: 2026-02-24T17:35:56.798Z,
+  updatedAt: 2026-02-24T17:35:56.802Z,
+  __v: 0
+}
+
+Latest Model3D:
+{
+  _id: new ObjectId('699de3265027810eb0ea37a9'),
+  userId: '68e1fcd1bddcf2dba070b22e',
+  modelUrl: '/temp/outputs/pifuhd_final/recon/result_test_512.obj',
+  createdAt: 2026-02-24T17:43:02.248Z,
+  __v: 0
+}

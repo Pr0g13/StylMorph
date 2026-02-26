@@ -1,0 +1,11 @@
+
+C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\frontend\src\components\RealisticAvatar3D.jsx
+  104:13  error    'waistScale' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                               no-unused-vars
+  473:24  warning  The ref value 'containerRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'containerRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+  474:18  error    'e' is defined but never used                                                                                                                                                                                                                                            no-unused-vars
+  474:21  error    Empty block statement                                                                                                                                                                                                                                                    no-empty
+  478:16  error    'e' is defined but never used                                                                                                                                                                                                                                            no-unused-vars
+  478:19  error    Empty block statement                                                                                                                                                                                                                                                    no-empty
+
+✖ 6 problems (5 errors, 1 warning)
+
