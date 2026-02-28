@@ -1320,3 +1320,20 @@ STDERR:
 100%|##########| 1/1 [01:48<00:00, 108.95s/it]100%|##########| 1/1 [01:48<00:00, 108.95s/it]
 
 
+Timestamp: 2026-02-28T15:40:54.411Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs\1772293075419297 -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs\1772293075419297 -r 128 --use_rect
+Exit Code: 0
+STDOUT:
+Resuming from  ./checkpoints/pifuhd.pt
+Warning: opt is overwritten.
+test data size:  1
+initialize network with normal
+initialize network with normal
+generate mesh (test) ...
+C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs\1772293075419297/pifuhd_final/recon/result_test_128.obj
+
+STDERR:
+  0%|          | 0/1 [00:00<?, ?it/s][ WARN:0@125.223] global loadsave.cpp:1089 cv::imwrite_ Unsupported depth image for selected encoder is fallbacked to CV_8U.
+100%|##########| 1/1 [02:11<00:00, 131.42s/it]100%|##########| 1/1 [02:11<00:00, 131.42s/it]
+
+
