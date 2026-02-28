@@ -15,21 +15,24 @@ exports.runPifuHD = async (req, res) => {
       return res.status(400).json({ error: "Image file not received" });
     }
 
-    // 1️⃣ Image from frontend - already saved as test.png by upload middleware
-    const inputImage = path.resolve(req.file.path);
+    // Unique job ID to prevent concurrent users from wiping each other's files
+    const jobId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+    const inputDir = path.resolve(__dirname, "../../temp/inputs", jobId);
+
+    // Create new input dir and move the file there
+    fs.mkdirSync(inputDir, { recursive: true });
+    const originalInputImage = path.resolve(req.file.path);
+    const inputImage = path.join(inputDir, req.file.filename);
+
+    // Copy file to unique directory
+    fs.copyFileSync(originalInputImage, inputImage);
     console.log(`📁 Input image path: ${inputImage}`);
 
-    // Clean up any old files in inputs directory before processing
     try {
-      const inputDir = path.dirname(inputImage);
-      const files = fs.readdirSync(inputDir);
-      for (const file of files) {
-        if (file !== "test.png") { // req.file.filename is usually test.png
-          fs.unlinkSync(path.join(inputDir, file));
-        }
-      }
+      // Clean up the original file left in the common folder
+      fs.unlinkSync(originalInputImage);
     } catch (cleanErr) {
-      console.error("Failed to clean inputs directory:", cleanErr);
+      console.error("Failed to clean original file:", cleanErr);
     }
 
     // ----- Perfect Image Framing for PiFuHD using Python (rembg + opencv) -----
@@ -50,13 +53,12 @@ exports.runPifuHD = async (req, res) => {
 
     // 2️⃣ Run PIFuHD - make sure ml/pifuhd is accessible
     const pifuDir = path.resolve(__dirname, "../../../ml/pifuhd");
-    const outputDir = path.resolve(__dirname, "../../temp/outputs");
+    const outputDir = path.resolve(__dirname, "../../temp/outputs", jobId);
 
-    // Create output directory if it doesn't exist, OR clear it if it does
-    if (fs.existsSync(outputDir)) {
-      fs.rmSync(outputDir, { recursive: true, force: true });
+    // Create unique output directory
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
     }
-    fs.mkdirSync(outputDir, { recursive: true });
 
     console.log(`📁 PiFu Directory: ${pifuDir}`);
     console.log(`📁 Output Directory: ${outputDir}`);
@@ -75,11 +77,20 @@ exports.runPifuHD = async (req, res) => {
     console.log(`🚀 Running command: python ${args.join(" ")}`);
     console.log(`📂 CWD: ${pifuDir}`);
 
+    // Set environment variables to prevent PyTorch / OpenMP deadlocks on Windows
+    const env = {
+      ...process.env,
+      OMP_NUM_THREADS: "1",
+      MKL_NUM_THREADS: "1",
+      OMP_MAX_ACTIVE_LEVELS: "1"
+    };
+
     const { spawn } = require("child_process");
     // shell: false automatically handles spaces in arguments correctly
     const child = spawn("python", args, {
       cwd: pifuDir,
-      shell: false
+      shell: false,
+      env: env
     });
 
     let stdoutData = "";
@@ -88,13 +99,13 @@ exports.runPifuHD = async (req, res) => {
     child.stdout.on("data", (data) => {
       const output = data.toString();
       stdoutData += output;
-      // console.log(`[PiFuHD]: ${output}`); // Optional: log real-time
+      console.log(`[PiFuHD]: ${output.trim()}`);
     });
 
     child.stderr.on("data", (data) => {
       const output = data.toString();
       stderrData += output;
-      // console.error(`[PiFuHD Err]: ${output}`); // Optional: log real-time
+      console.error(`[PiFuHD Err]: ${output.trim()}`);
     });
 
     child.on("close", async (code) => {
@@ -147,7 +158,7 @@ exports.runPifuHD = async (req, res) => {
         console.error("❌ Cloudinary upload failed:", uploadError);
         // Return local path (accessible via static route) if Cloudinary fails
         // Use relative path for frontend
-        url = `/temp/outputs/pifuhd_final/recon/${objFile}`;
+        url = `/temp/outputs/${jobId}/pifuhd_final/recon/${objFile}`;
       }
 
       // 5.5️⃣ Upload Texture Image to Cloudinary

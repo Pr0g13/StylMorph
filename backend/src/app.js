@@ -16,7 +16,7 @@ const app = express();
 // Connect to database (if you have one)
 try {
   connectDB();
-  console.log("✅ Connected to database");~
+  console.log("✅ Connected to database");
 } catch (err) {
   console.log("⚠️ Database connection failed:", err.message);
 }

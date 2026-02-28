@@ -11,11 +11,8 @@ async function run() {
     try {
         const token = jwt.sign({ id: new mongoose.Types.ObjectId().toString() }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '1h' });
 
-        // Create a real PNG to be sure
-        const dummyImg = path.join(__dirname, 'dummy.png');
-        // Minimal valid 1x1 png 
-        const pngBinary = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", 'base64');
-        fs.writeFileSync(dummyImg, pngBinary);
+        // Use the real PIFuHD test image
+        const dummyImg = path.join(__dirname, '../ml/pifuhd/sample_images/test.png');
 
         const form = new FormData();
         form.append('photo', fs.createReadStream(dummyImg), {

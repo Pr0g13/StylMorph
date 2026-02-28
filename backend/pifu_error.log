@@ -1209,3 +1209,114 @@ Traceback (most recent call last):
 _pickle.UnpicklingError: invalid load key, '\x02'.
 
 
+Timestamp: 2026-02-26T16:35:12.253Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 0
+STDOUT:
+Resuming from  ./checkpoints/pifuhd.pt
+Warning: opt is overwritten.
+test data size:  1
+initialize network with normal
+initialize network with normal
+generate mesh (test) ...
+C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs/pifuhd_final/recon/result_test_128.obj
+
+STDERR:
+  0%|          | 0/1 [00:00<?, ?it/s][ WARN:0@1450.127] global loadsave.cpp:1089 cv::imwrite_ Unsupported depth image for selected encoder is fallbacked to CV_8U.
+100%|##########| 1/1 [00:33<00:00, 33.01s/it]100%|##########| 1/1 [00:33<00:00, 33.01s/it]
+
+
+Timestamp: 2026-02-26T16:40:13.623Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 4294967295
+STDOUT:
+
+STDERR:
+
+
+Timestamp: 2026-02-26T17:03:52.777Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 4294967295
+STDOUT:
+
+STDERR:
+
+
+Timestamp: 2026-02-26T17:05:11.589Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 4294967295
+STDOUT:
+
+STDERR:
+
+
+Timestamp: 2026-02-26T17:08:57.533Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 4294967295
+STDOUT:
+
+STDERR:
+
+
+Timestamp: 2026-02-27T17:40:28.633Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 2
+STDOUT:
+
+STDERR:
+usage: simple_test.py [-h] [-i INPUT_PATH] [-o OUT_PATH] [-c CKPT_PATH]
+                      [-r RESOLUTION] [--use_rect]
+simple_test.py: error: unrecognized arguments: Project\StylMorph\StylMorph\backend\temp\inputs Project\StylMorph\StylMorph\backend\temp\outputs
+
+
+Timestamp: 2026-02-27T17:42:45.577Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 0
+STDOUT:
+Resuming from  ./checkpoints/pifuhd.pt
+Warning: opt is overwritten.
+test data size:  1
+initialize network with normal
+initialize network with normal
+generate mesh (test) ...
+C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs/pifuhd_final/recon/result_test_128.obj
+
+STDERR:
+  0%|          | 0/1 [00:00<?, ?it/s][ WARN:0@46.812] global loadsave.cpp:1089 cv::imwrite_ Unsupported depth image for selected encoder is fallbacked to CV_8U.
+100%|##########| 1/1 [00:50<00:00, 50.41s/it]100%|##########| 1/1 [00:50<00:00, 50.41s/it]
+
+
+Timestamp: 2026-02-28T14:46:53.304Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs -r 128 --use_rect
+Exit Code: 0
+STDOUT:
+Resuming from  ./checkpoints/pifuhd.pt
+Warning: opt is overwritten.
+test data size:  1
+initialize network with normal
+initialize network with normal
+generate mesh (test) ...
+C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs/pifuhd_final/recon/result_test_128.obj
+
+STDERR:
+  0%|          | 0/1 [00:00<?, ?it/s][ WARN:0@84.060] global loadsave.cpp:1089 cv::imwrite_ Unsupported depth image for selected encoder is fallbacked to CV_8U.
+100%|##########| 1/1 [01:25<00:00, 85.96s/it]100%|##########| 1/1 [01:25<00:00, 85.96s/it]
+
+
+Timestamp: 2026-02-28T15:20:55.288Z
+Command: python -m apps.simple_test -i C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\inputs\1772291910079354 -o C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs\1772291910079354 -r 128 --use_rect
+Exit Code: 0
+STDOUT:
+Resuming from  ./checkpoints/pifuhd.pt
+Warning: opt is overwritten.
+test data size:  1
+initialize network with normal
+initialize network with normal
+generate mesh (test) ...
+C:\Users\neera\OneDrive\Documents\Major Project\StylMorph\StylMorph\backend\temp\outputs\1772291910079354/pifuhd_final/recon/result_test_128.obj
+
+STDERR:
+  0%|          | 0/1 [00:00<?, ?it/s][ WARN:0@102.382] global loadsave.cpp:1089 cv::imwrite_ Unsupported depth image for selected encoder is fallbacked to CV_8U.
+100%|##########| 1/1 [01:48<00:00, 108.95s/it]100%|##########| 1/1 [01:48<00:00, 108.95s/it]
+
+
