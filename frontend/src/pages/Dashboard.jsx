@@ -30,6 +30,7 @@ const Dashboard = () => {
   const [tryOnGarmentPreview, setTryOnGarmentPreview] = useState(null);
   const [tryOnResultUrl, setTryOnResultUrl] = useState(null);
   const [tryOnLoading, setTryOnLoading] = useState(false);
+  const [tryOnStatus, setTryOnStatus] = useState("");
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -506,14 +507,29 @@ const Dashboard = () => {
                           }
                           setTryOnLoading(true);
                           setTryOnResultUrl(null);
+                          setTryOnStatus("Starting job…");
                           try {
-                            const res = await api.generateTryOn(tryOnPerson, tryOnGarment, "tops");
-                            if (!res.success || !res.url) {
-                              throw new Error("Try-on service did not return an image URL.");
+                            // 1) Start job
+                            const jobId = await api.startTryOnJob(tryOnPerson, tryOnGarment);
+                            setTryOnStatus("Job queued. Waiting for result…");
+
+                            // 2) Poll until done
+                            const pollIntervalMs = 10000;
+                            let done = false;
+                            while (!done) {
+                              const { done: isDone, url, status } = await api.fetchTryOnResult(jobId);
+                              if (isDone && url) {
+                                setTryOnResultUrl(url);
+                                setTryOnStatus("Completed");
+                                done = true;
+                              } else {
+                                setTryOnStatus(status || "processing…");
+                                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+                              }
                             }
-                            setTryOnResultUrl(res.url);
                           } catch (err) {
-                            alert(err.message || "Failed to run virtual try-on. Check that your Gradio server is running.");
+                            setTryOnStatus("");
+                            alert(err.message || "Failed to run virtual try-on. Check that your API server is running.");
                           } finally {
                             setTryOnLoading(false);
                           }
@@ -531,6 +547,7 @@ const Dashboard = () => {
                           setTryOnPersonPreview(null);
                           setTryOnGarmentPreview(null);
                           setTryOnResultUrl(null);
+                          setTryOnStatus("");
                         }}
                         disabled={tryOnLoading}
                         className="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
@@ -538,6 +555,12 @@ const Dashboard = () => {
                         Clear
                       </button>
                     </div>
+
+                    {tryOnStatus && (
+                      <p className="mt-4 text-xs text-gray-400">
+                        Status: <span className="text-teal-300">{tryOnStatus}</span>
+                      </p>
+                    )}
 
                     {tryOnResultUrl && (
                       <div className="mt-6">
