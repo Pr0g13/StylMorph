@@ -214,8 +214,9 @@ exports.generateModels = async (req, res) => {
       });
     }
 
-    // Set URL only if successfully generated
+    // Set URLs only if successfully generated/uploaded
     if (pifuhdUrl) avatar.pifuhdUrl = pifuhdUrl;
+    if (imageUrl) avatar.imageUrl = imageUrl;
 
     await avatar.save();
 
@@ -230,6 +231,7 @@ exports.generateModels = async (req, res) => {
     res.json({
       msg: "✅ Model generated successfully",
       pifuhdUrl,
+      imageUrl,
       avatar,
       pifuhdSuccess: !!pifuhdUrl
     });

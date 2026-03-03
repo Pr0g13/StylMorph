@@ -20,6 +20,8 @@ const AvatarSchema = new mongoose.Schema({
   },
   // URL of the generated PIFuHD .obj from Cloudinary
   pifuhdUrl: { type: String, default: null },
+  // URL of the uploaded image used for generation
+  imageUrl: { type: String, default: null },
   // Wearables added by the user
   wearables: [{
     url: String,

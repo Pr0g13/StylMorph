@@ -1,0 +1,49 @@
+[dotenv@17.2.3] injecting env (6) from .env -- tip: G£‡ audit secrets and track compliance: https://dotenvx.com/ops
+G£‡ Connected to MongoDB
+node : (node:28300) 
+[MONGOOSE] Warning: 
+Duplicate schema index 
+on {"userId":1} found. 
+This is often due to 
+declaring an index 
+using both "index: 
+true" and 
+"schema.index()". 
+Please remove the 
+duplicate index 
+definition.
+At line:1 char:1
++ node src/server.js 
+2>&1 | out-string | 
+set-content out.log
++ 
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: ((node:28300)    
+ [M...dex definitio    
+n.:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+(Use `node 
+--trace-warnings ...` 
+to show where the 
+warning was created)
+(node:28300) 
+[MONGOOSE] Warning: 
+Duplicate schema index 
+on {"userId":1} found. 
+This is often due to 
+declaring an index 
+using both "index: 
+true" and 
+"schema.index()". 
+Please remove the 
+duplicate index 
+definition.
+=É‹« Server running on port 5000
+MongoDB connected...
+
