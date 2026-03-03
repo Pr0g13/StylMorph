@@ -1,5 +1,7 @@
 // frontend/src/services/api.js
 const API_URL = "http://localhost:5000";
+// Full FastAPI /tryon URL (ngrok public URL + /tryon)
+const VTON_TRYON_URL = import.meta.env.VITE_VTON_TRYON_URL || "";
 
 const getToken = () => localStorage.getItem("token");
 
@@ -91,4 +93,32 @@ export const generateModels = async (formData) => {
   } catch {
     throw new Error(`Invalid JSON response: ${text.slice(0, 200)}`);
   }
+};
+
+// ── Virtual Try-On via FastAPI/ngrok ───────────────────────────────────────
+export const generateTryOn = async (personFile, garmentFile) => {
+  if (!VTON_TRYON_URL) {
+    throw new Error("VITE_VTON_TRYON_URL is not set. Please add it to your frontend .env.");
+  }
+
+  const formData = new FormData();
+  // Match FastAPI field names: person, cloth
+  formData.append("person", personFile);
+  formData.append("cloth", garmentFile);
+
+  const res = await fetch(VTON_TRYON_URL, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Try-on API error (${res.status}): ${text || res.statusText}`);
+  }
+
+  // Assume the Flask API returns the image bytes directly.
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+
+  return { success: true, url };
 };

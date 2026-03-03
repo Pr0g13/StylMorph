@@ -23,6 +23,14 @@ const Dashboard = () => {
   const [wearableInput, setWearableInput] = useState('');
   const [pifuImage, setPifuImage] = useState(null);
 
+  // ── Try-On (Gradio) state ─────────────────────────────────────────────────────
+  const [tryOnPerson, setTryOnPerson] = useState(null);
+  const [tryOnGarment, setTryOnGarment] = useState(null);
+  const [tryOnPersonPreview, setTryOnPersonPreview] = useState(null);
+  const [tryOnGarmentPreview, setTryOnGarmentPreview] = useState(null);
+  const [tryOnResultUrl, setTryOnResultUrl] = useState(null);
+  const [tryOnLoading, setTryOnLoading] = useState(false);
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!storedUser) { window.location.href = "/"; return; }
@@ -405,6 +413,140 @@ const Dashboard = () => {
                         {loading ? '⏳' : '➕ Add'}
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Simple AI Try-On using external Gradio API */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-teal-600/30 to-emerald-600/30 rounded-2xl blur-3xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                  <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-teal-500/60 transition-all duration-300">
+                    <h3 className="text-2xl font-bold mb-6 flex items-center space-x-2">
+                      <Zap className="w-6 h-6 text-teal-400" />
+                      <span>Virtual Try-On (Beta)</span>
+                    </h3>
+
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <p className="text-sm text-gray-300 mb-2">Person Image</p>
+                        <div className="aspect-[3/4] bg-gray-800 border-2 border-dashed border-gray-700 rounded-xl overflow-hidden flex items-center justify-center relative">
+                          {tryOnPersonPreview ? (
+                            <>
+                              <img src={tryOnPersonPreview} alt="Person" className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => { setTryOnPerson(null); setTryOnPersonPreview(null); }}
+                                className="absolute top-2 right-2 p-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-xs"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 transition-all">
+                              <Upload className="w-10 h-10 text-gray-500 mb-2" />
+                              <span className="text-xs text-gray-400">Click to upload</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setTryOnPerson(file);
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => setTryOnPersonPreview(reader.result);
+                                  reader.readAsDataURL(file);
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-gray-300 mb-2">Garment Image</p>
+                        <div className="aspect-[3/4] bg-gray-800 border-2 border-dashed border-gray-700 rounded-xl overflow-hidden flex items-center justify-center relative">
+                          {tryOnGarmentPreview ? (
+                            <>
+                              <img src={tryOnGarmentPreview} alt="Garment" className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => { setTryOnGarment(null); setTryOnGarmentPreview(null); }}
+                                className="absolute top-2 right-2 p-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-xs"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 transition-all">
+                              <Upload className="w-10 h-10 text-gray-500 mb-2" />
+                              <span className="text-xs text-gray-400">Click to upload</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setTryOnGarment(file);
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => setTryOnGarmentPreview(reader.result);
+                                  reader.readAsDataURL(file);
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={async () => {
+                          if (!tryOnPerson || !tryOnGarment) {
+                            alert("Please upload both person and garment images.");
+                            return;
+                          }
+                          setTryOnLoading(true);
+                          setTryOnResultUrl(null);
+                          try {
+                            const res = await api.generateTryOn(tryOnPerson, tryOnGarment, "tops");
+                            if (!res.success || !res.url) {
+                              throw new Error("Try-on service did not return an image URL.");
+                            }
+                            setTryOnResultUrl(res.url);
+                          } catch (err) {
+                            alert(err.message || "Failed to run virtual try-on. Check that your Gradio server is running.");
+                          } finally {
+                            setTryOnLoading(false);
+                          }
+                        }}
+                        disabled={tryOnLoading || !tryOnPerson || !tryOnGarment}
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 rounded-xl font-medium hover:shadow-lg hover:shadow-teal-600/40 transition-all disabled:opacity-50 active:scale-95 flex items-center justify-center space-x-2"
+                      >
+                        <Zap className="w-5 h-5" />
+                        <span>{tryOnLoading ? "Generating..." : "Generate Try-On"}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setTryOnPerson(null);
+                          setTryOnGarment(null);
+                          setTryOnPersonPreview(null);
+                          setTryOnGarmentPreview(null);
+                          setTryOnResultUrl(null);
+                        }}
+                        disabled={tryOnLoading}
+                        className="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+                      >
+                        Clear
+                      </button>
+                    </div>
+
+                    {tryOnResultUrl && (
+                      <div className="mt-6">
+                        <h4 className="text-lg font-semibold mb-3 text-teal-400">Result</h4>
+                        <div className="max-w-sm mx-auto rounded-xl overflow-hidden border border-gray-700 bg-black">
+                          <img src={tryOnResultUrl} alt="Try-on result" className="w-full h-auto object-cover" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
