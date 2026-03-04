@@ -63,10 +63,25 @@ exports.saveAvatar = async (req, res) => {
 // Add wearable to avatar
 exports.addWearable = async (req, res) => {
   try {
-    const { url, name, thumbnail } = req.body;
+    const { name, thumbnail } = req.body;
+    let url = req.body.url;
 
-    if (!url || !name) {
-      return res.status(400).json({ msg: "URL and name are required" });
+    if (!name) {
+      return res.status(400).json({ msg: "Name is required" });
+    }
+
+    if (req.file) {
+      const imagePath = req.file.path;
+      try {
+        url = await uploadImage(imagePath);
+      } catch (uploadErr) {
+        console.warn(`[Wearable] Cloudinary upload failed: ${uploadErr.message}`);
+        return res.status(500).json({ msg: "Failed to upload image" });
+      } finally {
+        if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+      }
+    } else if (!url) {
+      return res.status(400).json({ msg: "Image file or URL is required" });
     }
 
     const avatar = await Avatar.findOne({ userId: req.user.id });
@@ -238,5 +253,92 @@ exports.generateModels = async (req, res) => {
   } catch (err) {
     console.error("[Model Generation] Server error:", err);
     res.status(500).json({ msg: "Server error during 3D generation", error: err.message });
+  }
+};
+
+// Execute Try-on View
+exports.viewWearable = async (req, res) => {
+  try {
+    const { wearableId } = req.params;
+    const avatar = await Avatar.findOne({ userId: req.user.id });
+
+    if (!avatar || !avatar.imageUrl) {
+      return res.status(404).json({ msg: "Avatar or user image not found." });
+    }
+
+    const wearable = avatar.wearables.find(w => w._id.toString() === wearableId);
+    if (!wearable) {
+      return res.status(404).json({ msg: "Wearable not found." });
+    }
+
+    const downloadAsBase64 = async (url) => {
+      const response = await fetch(url);
+      const buffer = await response.arrayBuffer();
+      return Buffer.from(buffer).toString('base64');
+    };
+
+    console.log("[View Wearable] Fetching images for API...");
+    const personBase64 = await downloadAsBase64(avatar.imageUrl);
+    const garmentBase64 = await downloadAsBase64(wearable.url);
+
+    console.log("[View Wearable] Calling try-on API...");
+    const tryonResponse = await fetch("https://unleisurely-ona-subimbricately.ngrok-free.dev/tryon", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true"
+      },
+      body: JSON.stringify({
+        person_image: personBase64,
+        garment_image: garmentBase64,
+        category: "tops"
+      }),
+      signal: AbortSignal.timeout(600000) // 10-min timeout for generation
+    });
+
+    if (!tryonResponse.ok) {
+      const errText = await tryonResponse.text();
+      throw new Error(`Try-on API returned ${tryonResponse.status}: ${errText.slice(0, 500)}`);
+    }
+
+    let tryonData;
+    try {
+      tryonData = await tryonResponse.json();
+    } catch (parseErr) {
+      throw new Error("Failed to parse API response. The server might have returned an invalid format or HTML error page.");
+    }
+
+    if (!tryonData.success || !tryonData.result_image) {
+      throw new Error(`Try-on API failed to return valid image: ${tryonData.error || tryonData.message}`);
+    }
+
+    console.log("[View Wearable] Try-on succeeded, saving to Cloudinary...");
+    const tempDir = path.join(__dirname, "../../temp");
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+    const base64Data = tryonData.result_image.replace(/^data:image\/\w+;base64,/, "");
+    const tempFilePath = path.join(tempDir, `tryon_${Date.now()}.png`);
+    fs.writeFileSync(tempFilePath, base64Data, 'base64');
+
+    const resultUrl = await uploadImage(tempFilePath);
+    if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+
+    if (!avatar.tryonResults) avatar.tryonResults = [];
+    avatar.tryonResults.push({
+      url: resultUrl,
+      processingTime: tryonData.processing_time || null,
+      message: tryonData.message || "Processed",
+      category: tryonData.category || "tops"
+    });
+    // Also push to viewResults for backward compatibility just in case
+    if (!avatar.viewResults) avatar.viewResults = [];
+    avatar.viewResults.push(resultUrl);
+
+    await avatar.save();
+
+    res.json({ msg: "✅ Try-on successful", resultUrl, tryonData, avatar });
+  } catch (err) {
+    console.error("[View Wearable] Error:", err.message);
+    res.status(500).json({ msg: "Server error during try-on", error: err.message });
   }
 };

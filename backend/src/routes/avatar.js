@@ -26,7 +26,8 @@ const {
   deleteWearable,
   saveSet,
   deleteSet,
-  generateModels
+  generateModels,
+  viewWearable
 } = require("../controllers/avatar");
 
 const router = express.Router();
@@ -34,7 +35,8 @@ const router = express.Router();
 // All routes are protected with auth middleware
 router.get("/", auth, getAvatar);
 router.post("/", auth, saveAvatar);
-router.post("/wearables", auth, addWearable);
+router.post("/wearables", auth, upload.single("image"), addWearable);
+router.post("/wearables/:wearableId/view", auth, viewWearable);
 router.delete("/wearables/:wearableId", auth, deleteWearable);
 router.post("/sets", auth, saveSet);
 router.delete("/sets/:setId", auth, deleteSet);

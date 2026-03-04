@@ -41,13 +41,29 @@ export const saveAvatar = async (measurements) => {
   return res.json();
 };
 
-export const addWearable = async (url, name, thumbnail) => {
+export const addWearable = async (formData) => {
   const res = await fetch(`${API_URL}/avatar/wearables`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeader() },
-    body: JSON.stringify({ url, name, thumbnail }),
+    headers: { ...authHeader() },
+    body: formData,
   });
   return res.json();
+};
+
+export const viewWearable = async (wearableId) => {
+  const res = await fetch(`${API_URL}/avatar/wearables/${wearableId}/view`, {
+    method: "POST",
+    headers: { ...authHeader() },
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Server error (${res.status}): ${text}`);
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid JSON response: ${text.slice(0, 200)}`);
+  }
 };
 
 export const deleteWearable = async (wearableId) => {

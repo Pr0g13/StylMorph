@@ -34,6 +34,14 @@ const AvatarSchema = new mongoose.Schema({
     wearables: [{ url: String, name: String, thumbnail: String }],
     savedAt: { type: Date, default: Date.now },
   }],
+  viewResults: [{ type: String }],
+  tryonResults: [{
+    url: String,
+    processingTime: Number,
+    message: String,
+    category: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

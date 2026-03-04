@@ -20,8 +20,9 @@ const Dashboard = () => {
 
   const [loading, setLoading] = useState(false);
   const [selectedWearable, setSelectedWearable] = useState(null);
-  const [wearableInput, setWearableInput] = useState('');
+  const [wearableInput, setWearableInput] = useState(null);
   const [pifuImage, setPifuImage] = useState(null);
+  const [viewingWearable, setViewingWearable] = useState(null);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -81,20 +82,35 @@ const Dashboard = () => {
 
   // ── Wearables ───────────────────────────────────────────────────────────────
   const handleAddWearable = async () => {
-    if (!wearableInput.trim()) return;
+    if (!wearableInput) return;
     if (!avatar) { alert("Create an avatar first!"); return; }
     setLoading(true);
     try {
       const emojis = ['👕', '👔', '🧥', '👗', '👖', '🩳', '🧦', '👘'];
-      await api.addWearable(
-        wearableInput,
-        `Garment ${(avatar?.wearables?.length || 0) + 1}`,
-        emojis[Math.floor(Math.random() * emojis.length)]
-      );
+      const formData = new FormData();
+      formData.append("image", wearableInput);
+      formData.append("name", `Garment ${(avatar?.wearables?.length || 0) + 1}`);
+      formData.append("thumbnail", emojis[Math.floor(Math.random() * emojis.length)]);
+
+      await api.addWearable(formData);
       await loadAvatar();
-      setWearableInput('');
+      setWearableInput(null);
     } catch { alert("Failed to add wearable"); }
     finally { setLoading(false); }
+  };
+
+  const viewWearable = async (w) => {
+    setViewingWearable(w._id);
+    try {
+      const data = await api.viewWearable(w._id);
+      const timeStr = data.tryonData?.processing_time ? ` in ${data.tryonData.processing_time}s` : '';
+      alert(`Try-on processed successfully${timeStr}!`);
+      await loadAvatar();
+    } catch (err) {
+      alert("Failed to view try-on: " + err.message);
+    } finally {
+      setViewingWearable(null);
+    }
   };
 
   const deleteWearable = async (id) => {
@@ -393,16 +409,26 @@ const Dashboard = () => {
                     <h3 className="text-2xl font-bold mb-6 flex items-center space-x-2">
                       <Shirt className="w-6 h-6 text-indigo-400" /><span>Add Wearables</span>
                     </h3>
-                    <div className="flex gap-4">
-                      <input
-                        type="text"
-                        placeholder="Paste product URL (Amazon, Myntra, etc.)…"
-                        value={wearableInput}
-                        onChange={(e) => setWearableInput(e.target.value)}
-                        className="flex-1 px-4 py-3 bg-black border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all"
-                      />
-                      <button onClick={handleAddWearable} disabled={loading} className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50">
-                        {loading ? '⏳' : '➕ Add'}
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-700 border-dashed rounded-xl cursor-pointer bg-black/50 hover:bg-black hover:border-indigo-500 transition-all">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-500">
+                              <span className="font-semibold text-indigo-400">Click to upload garment image</span>
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">{wearableInput ? wearableInput.name : "PNG, JPG up to 10MB"}</p>
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => setWearableInput(e.target.files[0])}
+                          />
+                        </label>
+                      </div>
+                      <button onClick={handleAddWearable} disabled={loading || !wearableInput} className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50">
+                        {loading ? '⏳ Uploading...' : '➕ Add Garment'}
                       </button>
                     </div>
                   </div>
@@ -427,7 +453,9 @@ const Dashboard = () => {
                               <h4 className="font-semibold text-sm truncate mb-1">{w.name}</h4>
                               <p className="text-xs text-gray-500 mb-3 truncate">{w.url}</p>
                               <div className="flex gap-2">
-                                <button onClick={() => setSelectedWearable(w)} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${selectedWearable?._id === w._id ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-indigo-600/50'}`}>👁️ View</button>
+                                <button onClick={() => viewWearable(w)} disabled={viewingWearable === w._id} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${viewingWearable === w._id ? 'bg-indigo-500 opacity-50' : 'bg-indigo-600 hover:bg-indigo-500'}`}>
+                                  {viewingWearable === w._id ? '⏳ Processing...' : '👁️ View Try-on'}
+                                </button>
                                 <button onClick={() => deleteWearable(w._id)} disabled={loading} className="px-3 py-2 bg-gray-800 hover:bg-red-600/30 rounded-lg transition-all disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
@@ -437,6 +465,31 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
+
+                {(avatar.tryonResults?.length > 0 || avatar.viewResults?.length > 0) && (
+                  <div className="mt-8">
+                    <h3 className="text-xl font-bold mb-4">Try-on Results</h3>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {avatar.tryonResults?.length > 0 ? (
+                        avatar.tryonResults.map((res, idx) => (
+                          <div key={`new-${idx}`} className="relative group rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 group-hover:border-indigo-600/50 transition-all">
+                            <img src={res.url} alt={`Try-on ${idx}`} className="w-full h-auto object-cover" />
+                            <div className="p-4 border-t border-gray-800">
+                              <p className="text-sm text-green-400 font-semibold mb-1">✅ {res.message || "Processed successfully"}</p>
+                              {res.processingTime && <p className="text-xs text-gray-400 mt-1">⏱ Processing time: {res.processingTime}s</p>}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        avatar.viewResults?.map((resUrl, idx) => (
+                          <div key={`old-${idx}`} className="relative group rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 group-hover:border-indigo-600/50 transition-all">
+                            <img src={resUrl} alt={`Try-on ${idx}`} className="w-full h-auto object-cover" />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {avatar.wearables?.length > 0 && (
                   <div className="relative group">
