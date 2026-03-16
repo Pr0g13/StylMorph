@@ -22,6 +22,7 @@ const Dashboard = () => {
   const [selectedWearable, setSelectedWearable] = useState(null);
   const [wearableInput, setWearableInput] = useState(null);
   const [pifuImage, setPifuImage] = useState(null);
+  const [heightInput, setHeightInput] = useState('');
   const [viewingWearable, setViewingWearable] = useState(null);
 
   useEffect(() => {
@@ -42,7 +43,8 @@ const Dashboard = () => {
 
   // ── Manual measurement save ─────────────────────────────────────────────────
   const handleMeasurementSubmit = async () => {
-    if (Object.values(measurements).some((v) => !v)) {
+    const numericKeys = ['height', 'chest', 'waist', 'hips', 'shoulder', 'inseam', 'armLength', 'neckSize'];
+    if (numericKeys.some((k) => !measurements[k])) {
       alert("Please fill all measurement fields");
       return;
     }
@@ -65,18 +67,29 @@ const Dashboard = () => {
       alert("Please select an image first!");
       return;
     }
+    if (!heightInput || parseFloat(heightInput) < 50 || parseFloat(heightInput) > 280) {
+      alert("Please enter a valid height (50–280 cm) so measurements can be extracted.");
+      return;
+    }
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append("image", pifuImage);
+      formData.append("height", heightInput);
       const result = await api.generateModels(formData);
-      alert(result.msg || "3D Model Generated!");
+      const extracted = result.measurementsExtracted;
+      alert(
+        extracted
+          ? `✅ 3D Model Generated!\n📐 Body measurements auto-extracted from your 3D model.`
+          : (result.msg || "3D Model Generated!")
+      );
       await loadAvatar();
     } catch (err) {
       alert(err.message || "Failed to generate PIFuHD model");
     } finally {
       setLoading(false);
       setPifuImage(null);
+      setHeightInput('');
     }
   };
 
@@ -237,18 +250,37 @@ const Dashboard = () => {
                         modelUrl={modelUrl}
                       />
                     </div>
-                    <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {[
-                        { label: 'Height', value: `${measurements.height || '—'}cm` },
-                        { label: 'Chest', value: `${measurements.chest || '—'}cm` },
-                        { label: 'Waist', value: `${measurements.waist || '—'}cm` },
-                        { label: 'Hips', value: `${measurements.hips || '—'}cm` },
-                      ].map((s, i) => (
-                        <div key={i} className="bg-gray-800/50 rounded-lg p-4 text-center">
-                          <div className="text-xs text-gray-400 mb-1">{s.label}</div>
-                          <div className="text-lg font-bold text-indigo-400">{s.value}</div>
-                        </div>
-                      ))}
+                    <div className="mt-6">
+                      {/* Source badge */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-sm font-semibold text-gray-300">📐 Body Measurements</span>
+                        {avatar?.measurements?.source === 'auto' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🤖 Auto-extracted from 3D model</span>
+                        )}
+                        {avatar?.measurements?.source === 'manual' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">✏️ Manually entered</span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                          { label: 'Height',       icon: '📏', value: measurements.height    },
+                          { label: 'Chest',        icon: '👕', value: measurements.chest     },
+                          { label: 'Waist',        icon: '⭕', value: measurements.waist     },
+                          { label: 'Hips',         icon: '🩲', value: measurements.hips      },
+                          { label: 'Shoulder',     icon: '↔️', value: measurements.shoulder  },
+                          { label: 'Inseam',       icon: '📐', value: measurements.inseam    },
+                          { label: 'Arm Length',   icon: '💪', value: measurements.armLength },
+                          { label: 'Neck Size',    icon: '🔵', value: measurements.neckSize  },
+                        ].map((s, i) => (
+                          <div key={i} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-3 text-center hover:border-indigo-600/40 transition-all duration-200">
+                            <div className="text-lg mb-1">{s.icon}</div>
+                            <div className="text-xs text-gray-400 mb-1">{s.label}</div>
+                            <div className="text-base font-bold text-indigo-400">
+                              {s.value ? `${s.value} cm` : <span className="text-gray-600">—</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -309,6 +341,25 @@ const Dashboard = () => {
                       </p>
                     </div>
                     <form onSubmit={handlePifuSubmit} className="space-y-4">
+                      {/* Height input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-2">
+                          <span>📏</span>
+                          <span>Your Height (cm) <span className="text-red-400">*</span></span>
+                        </label>
+                        <input
+                          type="number"
+                          min="50" max="280" step="0.5"
+                          placeholder="e.g. 175"
+                          value={heightInput}
+                          onChange={(e) => setHeightInput(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-black border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-all"
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Required to accurately scale your 3D model and extract body measurements.</p>
+                      </div>
+
+                      {/* Image upload */}
                       <div className="flex items-center justify-center w-full">
                         <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-700 border-dashed rounded-xl cursor-pointer bg-black/50 hover:bg-black hover:border-purple-500 transition-all">
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -326,9 +377,10 @@ const Dashboard = () => {
                           />
                         </label>
                       </div>
+
                       <button
                         type="submit"
-                        disabled={loading || !pifuImage}
+                        disabled={loading || !pifuImage || !heightInput}
                         className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold hover:shadow-lg hover:shadow-purple-600/50 transition-all duration-300 flex items-center justify-center space-x-2 active:scale-95 disabled:opacity-50"
                       >
                         <Zap className="w-5 h-5" />
@@ -446,8 +498,16 @@ const Dashboard = () => {
                       {avatar.wearables.map((w) => (
                         <div key={w._id} className="relative group">
                           <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
-                            <div className="aspect-square bg-gradient-to-br from-indigo-900 to-purple-900 flex items-center justify-center text-5xl">
-                              {w.thumbnail}
+                            <div className="aspect-square bg-gray-950 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={w.url}
+                                alt={w.name}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://via.placeholder.com/400?text=Garment';
+                                }}
+                              />
                             </div>
                             <div className="p-4">
                               <h4 className="font-semibold text-sm truncate mb-1">{w.name}</h4>
@@ -526,8 +586,24 @@ const Dashboard = () => {
                 {avatar.savedSets.map((set) => (
                   <div key={set._id} className="relative group">
                     <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all">
-                      <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center text-5xl">
-                        {set.wearables.map((w) => w.thumbnail).join(' ')}
+                      <div className="aspect-video bg-gray-950 grid grid-cols-2 gap-1 p-1 overflow-hidden">
+                        {set.wearables.slice(0, 4).map((w, idx) => (
+                          <img
+                            key={idx}
+                            src={w.url}
+                            alt={w.name}
+                            className="w-full h-full object-cover rounded-sm"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://via.placeholder.com/200?text=Item';
+                            }}
+                          />
+                        ))}
+                        {set.wearables.length === 0 && (
+                          <div className="col-span-2 flex items-center justify-center text-gray-600">
+                            <Shirt className="w-8 h-8" />
+                          </div>
+                        )}
                       </div>
                       <div className="p-6">
                         <h4 className="font-bold text-lg mb-2">{set.name}</h4>

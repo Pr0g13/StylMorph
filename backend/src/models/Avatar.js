@@ -9,14 +9,16 @@ const AvatarSchema = new mongoose.Schema({
     unique: true,
   },
   measurements: {
-    height: { type: Number, default: null },
-    chest: { type: Number, default: null },
-    waist: { type: Number, default: null },
-    hips: { type: Number, default: null },
-    shoulder: { type: Number, default: null },
-    inseam: { type: Number, default: null },
+    height:    { type: Number, default: null },
+    chest:     { type: Number, default: null },
+    waist:     { type: Number, default: null },
+    hips:      { type: Number, default: null },
+    shoulder:  { type: Number, default: null },
+    inseam:    { type: Number, default: null },
     armLength: { type: Number, default: null },
-    neckSize: { type: Number, default: null },
+    neckSize:  { type: Number, default: null },
+    // 'auto' = extracted from 3D model, 'manual' = user-entered
+    source:    { type: String, enum: ['auto', 'manual', null], default: null },
   },
   // URL of the generated PIFuHD .obj from Cloudinary
   pifuhdUrl: { type: String, default: null },

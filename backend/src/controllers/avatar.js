@@ -37,6 +37,7 @@ exports.saveAvatar = async (req, res) => {
         m[f] = parseFloat(measurements[f]) || null;
       }
     }
+    m.source = "manual"; // manually entered by the user
 
     let avatar = await Avatar.findOne({ userId: req.user.id });
 
@@ -177,6 +178,12 @@ exports.generateModels = async (req, res) => {
     const imagePath = req.file.path;
     console.log(`[Model Generation] Uploaded image size: ${req.file.size} bytes`);
 
+    // ── Read user-supplied height (multer puts non-file fields in req.body) ──
+    const userHeight = req.body.height ? parseFloat(req.body.height) : null;
+    if (userHeight) {
+      console.log(`[Model Generation] User-provided height: ${userHeight} cm`);
+    }
+
     // 1. Upload image to Cloudinary
     console.log("[Model Generation] Uploading image to Cloudinary...");
     let imageUrl;
@@ -190,6 +197,7 @@ exports.generateModels = async (req, res) => {
     // Prepare paths
     const pifuOutputPath = path.resolve(__dirname, "../../temp", `pifuhd_${Date.now()}.obj`);
     const pifuScriptPath = path.resolve(__dirname, "../../../ml/Pifu/run_pifuhd.py");
+    const measureScriptPath = path.resolve(__dirname, "../../../ml/Pifu/extract_measurements.py");
 
     const tempDir = path.join(__dirname, "../../temp");
     if (!fs.existsSync(tempDir)) {
@@ -198,6 +206,7 @@ exports.generateModels = async (req, res) => {
 
     // 2. Run PIFuHD
     let pifuhdUrl = null;
+    let pifuhdObjGenerated = false;
     console.log(`[Model Generation] Executing PIFuHD script...`);
     try {
       await new Promise((resolve, reject) => {
@@ -210,7 +219,10 @@ exports.generateModels = async (req, res) => {
           resolve();
         });
       });
-      // Upload PIFuHD
+
+      pifuhdObjGenerated = fs.existsSync(pifuOutputPath);
+
+      // Upload PIFuHD OBJ to Cloudinary
       console.log("[Model Generation] Uploading PIFuHD model to Cloudinary...");
       try {
         pifuhdUrl = await uploadSmplObj(pifuOutputPath);
@@ -221,23 +233,71 @@ exports.generateModels = async (req, res) => {
       console.error("[Model Generation] PIFuHD execution failed:", err.message);
     }
 
-    // 3. Update the Avatar document
+    // 3. Extract measurements from the 3D OBJ (if we have the file + a real height)
+    let extractedMeasurements = null;
+    if (pifuhdObjGenerated && userHeight && userHeight > 50 && userHeight < 280) {
+      console.log("[Measurements] Running extract_measurements.py ...");
+      try {
+        extractedMeasurements = await new Promise((resolve, reject) => {
+          const cmd = `python "${measureScriptPath}" "${pifuOutputPath}" "${userHeight}"`;
+          exec(cmd, { maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
+            if (error) {
+              console.warn(`[Measurements] Extraction failed: ${error.message}`);
+              return reject(error);
+            }
+            try {
+              resolve(JSON.parse(stdout.trim()));
+            } catch (parseErr) {
+              console.warn(`[Measurements] JSON parse failed: ${parseErr.message}`);
+              reject(parseErr);
+            }
+          });
+        });
+        console.log("[Measurements] Extracted:", extractedMeasurements);
+      } catch (measErr) {
+        console.warn("[Measurements] Falling back to height-only measurements:", measErr.message);
+      }
+    }
+
+    // 4. Update the Avatar document
     let avatar = await Avatar.findOne({ userId: req.user.id });
     if (!avatar) {
-      avatar = new Avatar({
-        userId: req.user.id,
-      });
+      avatar = new Avatar({ userId: req.user.id });
     }
 
     // Set URLs only if successfully generated/uploaded
     if (pifuhdUrl) avatar.pifuhdUrl = pifuhdUrl;
-    if (imageUrl) avatar.imageUrl = imageUrl;
+    if (imageUrl)  avatar.imageUrl  = imageUrl;
+
+    // ── Apply measurements ──
+    if (extractedMeasurements && !extractedMeasurements.error) {
+      // Full auto-extraction succeeded
+      avatar.measurements = {
+        height:    extractedMeasurements.height    ?? userHeight,
+        chest:     extractedMeasurements.chest     ?? null,
+        waist:     extractedMeasurements.waist     ?? null,
+        hips:      extractedMeasurements.hips      ?? null,
+        shoulder:  extractedMeasurements.shoulder  ?? null,
+        inseam:    extractedMeasurements.inseam    ?? null,
+        armLength: extractedMeasurements.armLength ?? null,
+        neckSize:  extractedMeasurements.neckSize  ?? null,
+        source:    "auto",
+      };
+    } else if (userHeight) {
+      // Only height was provided — store it without overwriting other manual values
+      if (!avatar.measurements) avatar.measurements = {};
+      avatar.measurements.height = userHeight;
+      // Keep source as-is if already set, otherwise mark as manual
+      if (!avatar.measurements.source) {
+        avatar.measurements.source = "manual";
+      }
+    }
 
     await avatar.save();
 
-    // 4. Cleanup temporary files
+    // 5. Cleanup temporary files
     try {
-      if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+      if (fs.existsSync(imagePath))     fs.unlinkSync(imagePath);
       if (fs.existsSync(pifuOutputPath)) fs.unlinkSync(pifuOutputPath);
     } catch (cleanupErr) {
       console.warn(`[Model Generation] Cleanup warning: ${cleanupErr.message}`);
@@ -248,7 +308,9 @@ exports.generateModels = async (req, res) => {
       pifuhdUrl,
       imageUrl,
       avatar,
-      pifuhdSuccess: !!pifuhdUrl
+      measurements: avatar.measurements,
+      pifuhdSuccess:       !!pifuhdUrl,
+      measurementsExtracted: !!extractedMeasurements && !extractedMeasurements.error,
     });
   } catch (err) {
     console.error("[Model Generation] Server error:", err);
