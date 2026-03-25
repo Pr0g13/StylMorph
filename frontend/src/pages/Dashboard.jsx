@@ -24,6 +24,13 @@ const Dashboard = () => {
   const [pifuImage, setPifuImage] = useState(null);
   const [heightInput, setHeightInput] = useState('');
   const [viewingWearable, setViewingWearable] = useState(null);
+  const [skinTone, setSkinTone] = useState('');
+  const [gender, setGender] = useState('Male');
+  const [occasion, setOccasion] = useState('');
+  const [dressType, setDressType] = useState('');
+  const [isAgreed, setIsAgreed] = useState(false);
+  const [aiResponse, setAiResponse] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -146,6 +153,26 @@ const Dashboard = () => {
     try { await api.saveSet(`Look ${(avatar?.savedSets?.length || 0) + 1}`, avatar.wearables); await loadAvatar(); }
     catch { alert("Failed to save look"); }
     finally { setLoading(false); }
+  };
+
+  const handleAIRecommendation = async () => {
+    if (!skinTone || !occasion || !dressType) {
+      alert("Please select skin tone and enter occasion and dress type.");
+      return;
+    }
+    if (!isAgreed) {
+      alert("Please confirm the details to proceed.");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const result = await api.getAIRecommendation({ skinTone, gender, occasion, dressType });
+      setAiResponse(result.recommendation);
+    } catch (err) {
+      alert("Failed to get recommendation: " + err.message);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -397,47 +424,135 @@ const Dashboard = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
                   <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/30 transition-all duration-300">
                     <h3 className="text-2xl font-bold mb-2 flex items-center space-x-2">
-                      <Ruler className="w-6 h-6 text-indigo-400" />
-                      <span>Measurements</span>
+                      <Zap className="w-6 h-6 text-indigo-400" />
+                      <span>AI Styling Assistant</span>
                     </h3>
-                    <p className="text-gray-500 text-sm mb-6">Auto-filled after generation, or enter manually.</p>
-                    <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pr-1">
-                      {[
-                        { key: 'height', label: 'Height (cm)', placeholder: '175', icon: '📏' },
-                        { key: 'chest', label: 'Chest (cm)', placeholder: '96', icon: '👕' },
-                        { key: 'waist', label: 'Waist (cm)', placeholder: '80', icon: '⭕' },
-                        { key: 'hips', label: 'Hips (cm)', placeholder: '98', icon: '⬜' },
-                        { key: 'shoulder', label: 'Shoulder Width (cm)', placeholder: '45', icon: '↔️' },
-                        { key: 'inseam', label: 'Inseam (cm)', placeholder: '80', icon: '📐' },
-                        { key: 'armLength', label: 'Arm Length (cm)', placeholder: '60', icon: '💪' },
-                        { key: 'neckSize', label: 'Neck Size (cm)', placeholder: '37', icon: '⭕' },
-                      ].map(({ key, label, placeholder, icon }) => (
-                        <div key={key} className="group/field">
+                    <p className="text-gray-500 text-sm mb-6">Get personalized color combinations for your skin tone.</p>
+                    
+                    <div className="space-y-6">
+                      {/* Skin Tone Palette */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-3">Select Your Skin Tone</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[
+                            { name: 'Light', color: '#F6E5CF' },
+                            { name: 'Fair', color: '#F3D0AD' },
+                            { name: 'Medium', color: '#E5B887' },
+                            { name: 'Olive', color: '#C69076' },
+                            { name: 'Tan', color: '#AD7251' },
+                            { name: 'Brown', color: '#815740' },
+                            { name: 'Dark Brown', color: '#604134' },
+                            { name: 'Deep', color: '#3B2219' },
+                          ].map((tone) => (
+                            <button
+                              key={tone.color}
+                              onClick={() => setSkinTone(tone.name)}
+                              className={`w-8 h-8 rounded-full border-2 transition-all duration-300 hover:scale-110 ${skinTone === tone.name ? 'border-indigo-500 scale-110 shadow-lg shadow-indigo-500/50' : 'border-transparent'}`}
+                              style={{ backgroundColor: tone.color }}
+                              title={tone.name}
+                            />
+                          ))}
+                        </div>
+                        {skinTone && <p className="text-[10px] text-indigo-400 mt-1 font-medium">Selected: {skinTone}</p>}
+                      </div>
+
+                      {/* Gender selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Gender</label>
+                        <div className="flex gap-4">
+                          {['Male', 'Female', 'Other'].map((g) => (
+                            <label key={g} className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="gender"
+                                value={g}
+                                checked={gender === g}
+                                onChange={(e) => setGender(e.target.value)}
+                                className="w-4 h-4 text-indigo-600 bg-black border-gray-700"
+                              />
+                              <span className="text-sm text-gray-300">{g}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Occasion & Dress Type */}
+                      <div className="space-y-4">
+                        <div>
                           <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center space-x-2">
-                            <span>{icon}</span><span>{label}</span>
+                            <span>🎭</span><span>Occasion</span>
                           </label>
                           <input
-                            type="number"
-                            placeholder={placeholder}
-                            value={measurements[key]}
-                            onChange={(e) => setMeasurements({ ...measurements, [key]: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-black border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all duration-300 group-hover/field:border-gray-600"
+                            type="text"
+                            placeholder="e.g. Wedding, Job Interview"
+                            value={occasion}
+                            onChange={(e) => setOccasion(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-black border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all"
                           />
                         </div>
-                      ))}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center space-x-2">
+                            <span>👗</span><span>Dress Type</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Formal Suit, Summer Dress"
+                            value={dressType}
+                            onChange={(e) => setDressType(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-black border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Confirmation Checkbox */}
+                      <div className="flex items-center space-x-3 pt-2">
+                        <input
+                          type="checkbox"
+                          id="ai-confirm"
+                          checked={isAgreed}
+                          onChange={(e) => setIsAgreed(e.target.checked)}
+                          className="w-5 h-5 rounded border-gray-700 text-indigo-600 focus:ring-indigo-500 bg-black"
+                        />
+                        <label htmlFor="ai-confirm" className="text-sm text-gray-400 cursor-pointer hover:text-gray-300 transition-colors">
+                          I want styling advice based on these details
+                        </label>
+                      </div>
+
+                      <button
+                        onClick={handleAIRecommendation}
+                        disabled={aiLoading || !skinTone || !occasion || !dressType || !isAgreed}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-bold hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 flex items-center justify-center space-x-2 active:scale-95 disabled:opacity-50"
+                      >
+                        {aiLoading ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <span>Consulting Fashion AI...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-5 h-5" />
+                            <span>Get AI Styling Recommendation</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* AI Response Card */}
+                      {aiResponse && (
+                        <div className="animate-fade-in mt-6 bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 p-2">
+                            <Zap className="w-4 h-4 text-indigo-400 animate-pulse" />
+                          </div>
+                          <h4 className="font-bold text-indigo-400 mb-3 flex items-center gap-2">
+                            <span>✨</span> AI Recommendation
+                          </h4>
+                          <div className="text-sm text-gray-200 leading-relaxed whitespace-pre-line">
+                            {aiResponse}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <button
-                      onClick={handleMeasurementSubmit}
-                      disabled={loading}
-                      className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg font-medium hover:shadow-lg hover:shadow-indigo-600/50 transition-all duration-300 flex items-center justify-center space-x-2 active:scale-95 disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>{loading ? 'Saving…' : (avatar ? 'Update Measurements' : 'Save Measurements')}</span>
-                    </button>
                   </div>
                 </div>
-
-
               </div>
             </div>
           </div>

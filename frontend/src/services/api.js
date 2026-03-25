@@ -66,6 +66,15 @@ export const viewWearable = async (wearableId) => {
   }
 };
 
+export const getAIRecommendation = async (data) => {
+  const res = await fetch(`${API_URL}/avatar/ai-recommendation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+};
+
 export const deleteWearable = async (wearableId) => {
   const res = await fetch(`${API_URL}/avatar/wearables/${wearableId}`, {
     method: "DELETE",

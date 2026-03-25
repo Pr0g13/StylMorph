@@ -29,6 +29,7 @@ const {
   generateModels,
   viewWearable
 } = require("../controllers/avatar");
+const { getRecommendation } = require("../controllers/aiController");
 
 const router = express.Router();
 
@@ -41,5 +42,6 @@ router.delete("/wearables/:wearableId", auth, deleteWearable);
 router.post("/sets", auth, saveSet);
 router.delete("/sets/:setId", auth, deleteSet);
 router.post("/generate", auth, upload.single("image"), generateModels);
+router.post("/ai-recommendation", auth, getRecommendation);
 
 module.exports = router;
