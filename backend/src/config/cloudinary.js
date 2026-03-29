@@ -38,4 +38,22 @@ const uploadImage = async (filePath) => {
   return result.secure_url;
 };
 
-module.exports = { uploadSmplObj, uploadImage };
+const deleteImage = async (url) => {
+  try {
+    const publicId = `sam3d_images/${url.split('/').pop().split('.')[0]}`;
+    await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+  } catch (err) {
+    console.error("Cloudinary delete err:", err);
+  }
+};
+
+const deleteSmplObj = async (url) => {
+  try {
+    const publicId = `smpl_models/${url.split('/').pop().split('.')[0]}`;
+    await cloudinary.uploader.destroy(publicId, { resource_type: "raw" });
+  } catch (err) {
+    console.error("Cloudinary delete err:", err);
+  }
+};
+
+module.exports = { uploadSmplObj, uploadImage, deleteImage, deleteSmplObj };

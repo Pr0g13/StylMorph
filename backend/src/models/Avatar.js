@@ -33,12 +33,22 @@ const AvatarSchema = new mongoose.Schema({
   }],
   savedSets: [{
     name: String,
-    wearables: [{ url: String, name: String, thumbnail: String }],
+    wearables: [{ 
+      url: String, 
+      name: String, 
+      thumbnail: String,
+      tryonUrl: { type: String, default: null },
+      model3dUrl: { type: String, default: null }
+    }],
     savedAt: { type: Date, default: Date.now },
   }],
   viewResults: [{ type: String }],
   tryonResults: [{
     url: String,
+    wearableId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    wearableUrl: { type: String, default: null },
+    wearableName: { type: String, default: null },
+    model3dUrl: { type: String, default: null },
     processingTime: Number,
     message: String,
     category: String,

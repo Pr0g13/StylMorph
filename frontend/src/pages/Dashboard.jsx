@@ -32,6 +32,9 @@ const Dashboard = () => {
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
+  const [activePreviewSetId, setActivePreviewSetId] = useState(null);
+  const [activePreviewProduct, setActivePreviewProduct] = useState(null);
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!storedUser) { window.location.href = "/"; return; }
@@ -140,6 +143,13 @@ const Dashboard = () => {
     finally { setLoading(false); }
   };
 
+  const deleteTryon = async (id) => {
+    setLoading(true);
+    try { await api.deleteTryonResult(id); await loadAvatar(); }
+    catch { alert("Failed to delete try-on result"); }
+    finally { setLoading(false); }
+  };
+
   const deleteSet = async (id) => {
     setLoading(true);
     try { await api.deleteSet(id); await loadAvatar(); }
@@ -149,10 +159,38 @@ const Dashboard = () => {
 
   const handleSaveSet = async () => {
     if (!avatar?.wearables?.length) { alert("Add wearables first"); return; }
+    
+    const setWearables = avatar.wearables.map(w => {
+      const matchingResults = (avatar.tryonResults || []).filter(r => r.wearableUrl === w.url);
+      const latestResult = matchingResults[matchingResults.length - 1];
+      return {
+        ...w,
+        tryonUrl: latestResult ? latestResult.url : null,
+        model3dUrl: latestResult ? latestResult.model3dUrl : null
+      };
+    });
+
     setLoading(true);
-    try { await api.saveSet(`Look ${(avatar?.savedSets?.length || 0) + 1}`, avatar.wearables); await loadAvatar(); }
+    try { await api.saveSet(`Look ${(avatar?.savedSets?.length || 0) + 1}`, setWearables); await loadAvatar(); }
     catch { alert("Failed to save look"); }
     finally { setLoading(false); }
+  };
+
+  const handleGenerate3DFromTryon = async (tryonUrl) => {
+    if (!tryonUrl) return;
+    setLoading(true);
+    try {
+      const res = await api.generate3dFromSavedUrl(tryonUrl);
+      alert(res.msg);
+      await loadAvatar();
+      
+      // Update the active preview product local state so it immediately shows the 3D model
+      setActivePreviewProduct(prev => prev ? { ...prev, model3dUrl: res.model3dUrl } : null);
+    } catch (err) {
+      alert("Failed to generate 3D model: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAIRecommendation = async () => {
@@ -647,11 +685,19 @@ const Dashboard = () => {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {avatar.tryonResults?.length > 0 ? (
                         avatar.tryonResults.map((res, idx) => (
-                          <div key={`new-${idx}`} className="relative group rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 group-hover:border-indigo-600/50 transition-all">
+                          <div key={`new-${res._id || idx}`} className="relative group rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 group-hover:border-indigo-600/50 transition-all">
                             <img src={res.url} alt={`Try-on ${idx}`} className="w-full h-auto object-cover" />
-                            <div className="p-4 border-t border-gray-800">
-                              <p className="text-sm text-green-400 font-semibold mb-1">✅ {res.message || "Processed successfully"}</p>
-                              {res.processingTime && <p className="text-xs text-gray-400 mt-1">⏱ Processing time: {res.processingTime}s</p>}
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => deleteTryon(res._id)} disabled={loading} className="p-2 bg-red-600/90 hover:bg-red-500 rounded-full text-white backdrop-blur-sm shadow-lg">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="p-4 border-t border-gray-800 flex justify-between items-center">
+                              <div>
+                                <p className="text-sm text-green-400 font-semibold mb-1">✅ {res.message || "Processed successfully"}</p>
+                                {res.processingTime && <p className="text-xs text-gray-400 mt-1">⏱ Processing time: {res.processingTime}s</p>}
+                              </div>
+                              {res.wearableName && <p className="text-xs font-semibold px-2 py-1 bg-gray-800 rounded-md text-gray-300">{res.wearableName}</p>}
                             </div>
                           </div>
                         ))
@@ -727,10 +773,71 @@ const Dashboard = () => {
                           <p>👕 {set.wearables.length} wearable{set.wearables.length !== 1 ? 's' : ''}</p>
                         </div>
                         <div className="flex gap-2">
-                          <button className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition-all active:scale-95">👁️ Preview</button>
+                          <button 
+                            onClick={() => {
+                              setActivePreviewSetId(activePreviewSetId === set._id ? null : set._id);
+                              setActivePreviewProduct(null);
+                            }} 
+                            className={`flex-1 py-2 ${activePreviewSetId === set._id ? 'bg-indigo-500' : 'bg-indigo-600 hover:bg-indigo-700'} rounded-lg text-sm font-medium transition-all active:scale-95`}
+                          >
+                            {activePreviewSetId === set._id ? 'Close Preview' : '👁️ Preview Look'}
+                          </button>
                           <button onClick={() => deleteSet(set._id)} disabled={loading} className="px-3 py-2 bg-gray-800 hover:bg-red-600/30 rounded-lg transition-all disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
+
+                      {/* Preview Panel for Saved Set */}
+                      {activePreviewSetId === set._id && (
+                        <div className="border-t border-gray-800 p-6 bg-gray-950/50">
+                          <h5 className="font-semibold mb-3 text-sm text-gray-300">Select Product to Preview Try-on:</h5>
+                          <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2">
+                            {set.wearables.map((w, idx) => (
+                              <div 
+                                key={idx} 
+                                onClick={() => setActivePreviewProduct(activePreviewProduct === w ? null : w)}
+                                className={`cursor-pointer rounded-lg border-2 overflow-hidden w-16 h-16 flex-shrink-0 transition-all ${activePreviewProduct === w ? 'border-indigo-500 scale-105' : 'border-gray-800 hover:border-indigo-400'}`}
+                              >
+                                <img src={w.url} className="w-full h-full object-cover bg-gray-900" 
+                                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/100?text=Item'; }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {activePreviewProduct && activePreviewSetId === set._id && activePreviewProduct.tryonUrl && (
+                            <div className="mt-6 space-y-4 animate-fade-in">
+                              <h5 className="font-semibold text-indigo-400 flex items-center gap-2"><span>✨</span> Try-On Output</h5>
+                              <div className="rounded-xl overflow-hidden border border-gray-800 bg-black max-w-sm mx-auto">
+                                <img src={activePreviewProduct.tryonUrl} className="w-full h-auto" />
+                              </div>
+                              
+                              <button 
+                                onClick={() => handleGenerate3DFromTryon(activePreviewProduct.tryonUrl)}
+                                disabled={loading}
+                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                <span>🧊</span>
+                                <span>{loading ? 'Generating...' : (activePreviewProduct.model3dUrl ? 'Regenerate 3D Model' : 'Generate 3D Model')}</span>
+                              </button>
+                              
+                              {activePreviewProduct.model3dUrl && (
+                                <div className="mt-4 pt-4 border-t border-gray-800 animate-fade-in">
+                                  <h5 className="font-semibold text-purple-400 mb-3 flex items-center gap-2"><span>🧊</span> 3D Result</h5>
+                                  <div className="h-64 rounded-xl overflow-hidden border border-gray-800 bg-black relative">
+                                    <RealisticAvatar3D modelUrl={activePreviewProduct.model3dUrl} showWearable={null} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {activePreviewProduct && !activePreviewProduct.tryonUrl && (
+                            <div className="mt-4 p-4 text-center rounded-lg bg-gray-900 border border-gray-800 animate-fade-in">
+                              <p className="text-gray-400 text-sm">No try-on output found for this garment in this set.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

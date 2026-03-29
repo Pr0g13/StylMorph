@@ -27,7 +27,9 @@ const {
   saveSet,
   deleteSet,
   generateModels,
-  viewWearable
+  viewWearable,
+  deleteTryonResult,
+  generate3dFromUrl
 } = require("../controllers/avatar");
 const { getRecommendation } = require("../controllers/aiController");
 
@@ -43,5 +45,7 @@ router.post("/sets", auth, saveSet);
 router.delete("/sets/:setId", auth, deleteSet);
 router.post("/generate", auth, upload.single("image"), generateModels);
 router.post("/ai-recommendation", auth, getRecommendation);
+router.delete("/tryon-results/:resultId", auth, deleteTryonResult);
+router.post("/generate-3d", auth, generate3dFromUrl);
 
 module.exports = router;

@@ -1,5 +1,5 @@
 const Avatar = require("../models/Avatar");
-const { uploadImage, uploadSmplObj } = require("../config/cloudinary");
+const { uploadImage, uploadSmplObj, deleteImage, deleteSmplObj } = require("../config/cloudinary");
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
@@ -343,7 +343,7 @@ exports.viewWearable = async (req, res) => {
     const personBase64 = await downloadAsBase64(avatar.imageUrl);
     const garmentBase64 = await downloadAsBase64(wearable.url);
 
-    console.log("[View Wearable] Calling try-on API...");
+    console.log("[View Wearable] Calling try-on API to queue job...");
     const tryonResponse = await fetch("https://unleisurely-ona-subimbricately.ngrok-free.dev/tryon", {
       method: "POST",
       headers: {
@@ -370,37 +370,174 @@ exports.viewWearable = async (req, res) => {
       throw new Error("Failed to parse API response. The server might have returned an invalid format or HTML error page.");
     }
 
-    if (!tryonData.success || !tryonData.result_image) {
-      throw new Error(`Try-on API failed to return valid image: ${tryonData.error || tryonData.message}`);
+    if (!tryonData.success || !tryonData.job_id) {
+      throw new Error(`Try-on API failed to queue job: ${tryonData.error || tryonData.message}`);
     }
 
-    console.log("[View Wearable] Try-on succeeded, saving to Cloudinary...");
+    const jobId = tryonData.job_id;
+    console.log(`[View Wearable] Job queued successfully with ID: ${jobId}`);
+
+    // Return immediately to the frontend
+    res.json({ msg: "✅ Try-on job started. The result will appear in ~8 minutes.", tryonData, avatar });
+
+    // Start background task
+    setTimeout(async () => {
+      console.log(`[Background Task] 8 minutes passed. Retransmitting job ID ${jobId} to fetch result...`);
+      try {
+        const statusResponse = await fetch("https://unleisurely-ona-subimbricately.ngrok-free.dev/tryon", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true"
+          },
+          body: JSON.stringify({ job_id: jobId }),
+          signal: AbortSignal.timeout(60000)
+        });
+
+        if (!statusResponse.ok) {
+          throw new Error(`Try-on status API returned ${statusResponse.status}`);
+        }
+
+        const statusData = await statusResponse.json();
+        
+        if (!statusData.success || statusData.status !== 'completed' || !statusData.result_image) {
+          console.warn(`[Background Task] Try-on job ${jobId} incomplete or failed:`, statusData);
+          return;
+        }
+        
+        console.log(`[Background Task] Job ${jobId} try-on succeeded, saving to Cloudinary...`);
+        const tempDir = path.join(__dirname, "../../temp");
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+        const base64Data = statusData.result_image.replace(/^data:image\/\w+;base64,/, "");
+        const tempFilePath = path.join(tempDir, `tryon_${Date.now()}.png`);
+        fs.writeFileSync(tempFilePath, base64Data, 'base64');
+
+        const resultUrl = await uploadImage(tempFilePath);
+        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+
+        // Fetch latest avatar document in case it was modified
+        const freshAvatar = await Avatar.findOne({ userId: req.user.id });
+        if (freshAvatar) {
+          if (!freshAvatar.tryonResults) freshAvatar.tryonResults = [];
+          freshAvatar.tryonResults.push({
+            url: resultUrl,
+            wearableId: wearable._id,
+            wearableUrl: wearable.url,
+            wearableName: wearable.name,
+            processingTime: statusData.processing_time || null,
+            message: statusData.message || "Processed",
+            category: statusData.category || "tops"
+          });
+          // Also push to viewResults for backward compatibility just in case
+          if (!freshAvatar.viewResults) freshAvatar.viewResults = [];
+          freshAvatar.viewResults.push(resultUrl);
+
+          await freshAvatar.save();
+          console.log(`[Background Task] Successfully saved try-on result ${resultUrl} to Avatar.`);
+        }
+      } catch (e) {
+        console.error(`[Background Task] Error fetching or saving job ${jobId}:`, e.message);
+      }
+    }, 480 * 1000); // 8 minutes
+
+  } catch (err) {
+    console.error("[View Wearable] Error:", err.message);
+    // Ensure we only reply if headers aren't sent
+    if (!res.headersSent) {
+      res.status(500).json({ msg: "Server error during try-on", error: err.message });
+    }
+  }
+};
+
+// Delete Try-on Result
+exports.deleteTryonResult = async (req, res) => {
+  try {
+    const { resultId } = req.params;
+    const avatar = await Avatar.findOne({ userId: req.user.id });
+    if (!avatar) return res.status(404).json({ msg: "Avatar not found" });
+
+    const result = avatar.tryonResults.id(resultId);
+    if (!result) return res.status(404).json({ msg: "Try-on result not found" });
+
+    // Delete from Cloudinary
+    if (result.url) await deleteImage(result.url);
+    if (result.model3dUrl) await deleteSmplObj(result.model3dUrl);
+
+    avatar.tryonResults.pull(resultId);
+    await avatar.save();
+    
+    res.json({ msg: "✅ Try-on result deleted", avatar });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server error deleting try-on" });
+  }
+};
+
+// Generate 3D Model from a specific try-on URL
+exports.generate3dFromUrl = async (req, res) => {
+  try {
+    const { tryonUrl } = req.body;
+    if (!tryonUrl) return res.status(400).json({ msg: "tryonUrl is required" });
+
+    const avatar = await Avatar.findOne({ userId: req.user.id });
+    if (!avatar) return res.status(404).json({ msg: "Avatar not found" });
+
+    // Download the try-on image
+    const downloadResponse = await fetch(tryonUrl);
+    const buffer = await downloadResponse.arrayBuffer();
     const tempDir = path.join(__dirname, "../../temp");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    
+    const imagePath = path.join(tempDir, `tryon_dl_${Date.now()}.png`);
+    fs.writeFileSync(imagePath, Buffer.from(buffer));
 
-    const base64Data = tryonData.result_image.replace(/^data:image\/\w+;base64,/, "");
-    const tempFilePath = path.join(tempDir, `tryon_${Date.now()}.png`);
-    fs.writeFileSync(tempFilePath, base64Data, 'base64');
+    const pifuOutputPath = path.resolve(__dirname, "../../temp", `pifuhd_${Date.now()}.obj`);
+    const pifuScriptPath = path.resolve(__dirname, "../../../ml/Pifu/run_pifuhd.py");
 
-    const resultUrl = await uploadImage(tempFilePath);
-    if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-
-    if (!avatar.tryonResults) avatar.tryonResults = [];
-    avatar.tryonResults.push({
-      url: resultUrl,
-      processingTime: tryonData.processing_time || null,
-      message: tryonData.message || "Processed",
-      category: tryonData.category || "tops"
+    console.log(`[Model Generation] Executing PIFuHD on specific URL...`);
+    await new Promise((resolve, reject) => {
+        const pythonCmd = `python "${pifuScriptPath}" "${imagePath}" "${pifuOutputPath}"`;
+        exec(pythonCmd, { maxBuffer: 1024 * 1024 * 50 }, (error, stdout, stderr) => {
+          if (error) {
+            return reject(error);
+          }
+          resolve();
+        });
     });
-    // Also push to viewResults for backward compatibility just in case
-    if (!avatar.viewResults) avatar.viewResults = [];
-    avatar.viewResults.push(resultUrl);
+
+    if (!fs.existsSync(pifuOutputPath)) {
+       throw new Error("PIFuHD failed to generate OBJ");
+    }
+
+    const pifuhdUrl = await uploadSmplObj(pifuOutputPath);
+    
+    if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+    if (fs.existsSync(pifuOutputPath)) fs.unlinkSync(pifuOutputPath);
+
+    // Sync across the avatar document anywhere this url exists
+    if (avatar.tryonResults) {
+        avatar.tryonResults.forEach(r => {
+           if (r.url === tryonUrl) r.model3dUrl = pifuhdUrl;
+        });
+    }
+    if (avatar.savedSets) {
+        avatar.savedSets.forEach(set => {
+           set.wearables.forEach(w => {
+               if (w.tryonUrl === tryonUrl) w.model3dUrl = pifuhdUrl;
+           });
+        });
+    }
 
     await avatar.save();
 
-    res.json({ msg: "✅ Try-on successful", resultUrl, tryonData, avatar });
+    res.json({
+      msg: "✅ 3D Model generated",
+      model3dUrl: pifuhdUrl,
+      avatar
+    });
   } catch (err) {
-    console.error("[View Wearable] Error:", err.message);
-    res.status(500).json({ msg: "Server error during try-on", error: err.message });
+    console.error("[Model Generation] Server error:", err);
+    res.status(500).json({ msg: "Server error during 3D generation", error: err.message });
   }
 };

@@ -25,38 +25,55 @@ def run_pifuhd(input_image, output_obj):
     for f in glob.glob(os.path.join(temp_in_dir, "*")):
         os.remove(f)
 
-    # Copy input image to temp_in_dir
+    # 1. Copy input image to a temporary file locally and preprocess with rembg
     filename = os.path.basename(input_image)
-    temp_img_path = os.path.join(temp_in_dir, filename)
-    shutil.copy2(input_image, temp_img_path)
+    base = os.path.splitext(filename)[0]
+    
+    # We force the output of rembg to be PNG to preserve the alpha channel map
+    target_filename = base + ".png"
+    temp_img_path = os.path.join(temp_in_dir, target_filename)
 
-    # Calculate tight bounding box to improve PIFuHD accuracy
+    try:
+        from rembg import remove
+        print("Running rembg to remove background...")
+        with open(input_image, 'rb') as i_f:
+            input_data = i_f.read()
+            
+        out_data = remove(input_data)
+        
+        with open(temp_img_path, 'wb') as o_f:
+            o_f.write(out_data)
+            
+    except ImportError:
+        print("Warning: rembg module not found! Falling back to raw image copy.")
+        shutil.copy2(input_image, temp_img_path)
+    except Exception as e:
+        print(f"Warning: rembg failed ({e}). Falling back to raw image copy.")
+        shutil.copy2(input_image, temp_img_path)
+
+    # 2. Calculate tight bounding box to improve PIFuHD accuracy
     try:
         from PIL import Image
         import numpy as np
-        with Image.open(input_image) as img:
+        with Image.open(temp_img_path) as img:
             w, h = img.size
             if img.mode == 'RGBA':
-                # Use alpha channel to find bbox
+                # Perfect segmentation boundary using the alpha channel (e.g. from rembg)
                 alpha = np.array(img.split()[-1])
                 y_idx, x_idx = np.where(alpha > 0)
             else:
-                # Assuming background is white or black, finding foreground
+                # Fallback simple threshold
                 gray = img.convert("L")
                 np_img = np.array(gray)
-                # Simple threshold to find foreground (adjust if needed depending on input)
-                # Typically inputs to PIFuHD from SAM have transparent or solid white backgrounds.
-                # Here we assume anything not perfectly white (255) foreground if mostly white, else > 0
-                if np.mean(np_img) > 127: # mostly white bg
+                if np.mean(np_img) > 127: 
                     y_idx, x_idx = np.where(np_img < 250)
-                else: # mostly black bg
+                else:
                     y_idx, x_idx = np.where(np_img > 5)
 
             if len(y_idx) > 0 and len(x_idx) > 0:
                 y0, y1 = np.min(y_idx), np.max(y_idx)
                 x0, x1 = np.min(x_idx), np.max(x_idx)
             else:
-                # fallback to entire image
                 y0, y1 = 0, h - 1
                 x0, x1 = 0, w - 1
 
@@ -65,30 +82,27 @@ def run_pifuhd(input_image, output_obj):
             # The person should take up ~80% of the crop max dimension
             side = int(max(bbox_w, bbox_h) * 1.25)
             
-            # Center the square on the found bounding box
+            # Center the square on the bounding box
             cx, cy = x0 + bbox_w // 2, y0 + bbox_h // 2
             x0_sq = cx - side // 2
             y0_sq = cy - side // 2
             
-            # PIFuHD's dataset wrapper will safely pad negative/out-of-bound coordinates
             rect_str = f"{x0_sq} {y0_sq} {side} {side}"
             
     except Exception as e:
         print(f"Failed to calculate tight bounding box: {e}")
         try:
-             with Image.open(input_image) as img:
+             with Image.open(temp_img_path) as img:
                  w, h = img.size
         except:
              w, h = 1024, 1024
         
-        # Fallback square
         side = max(w, h)
         cx, cy = w // 2, h // 2
         x0_sq = cx - side // 2
         y0_sq = cy - side // 2
         rect_str = f"{x0_sq} {y0_sq} {side} {side}"
 
-    base = os.path.splitext(filename)[0]
     rect_path = os.path.join(temp_in_dir, f"{base}_rect.txt")
     print(f"PIFuHD BBox: {rect_str}")
     with open(rect_path, "w") as f:

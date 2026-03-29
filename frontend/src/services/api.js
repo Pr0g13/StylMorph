@@ -117,3 +117,28 @@ export const generateModels = async (formData) => {
     throw new Error(`Invalid JSON response: ${text.slice(0, 200)}`);
   }
 };
+
+export const deleteTryonResult = async (resultId) => {
+  const res = await fetch(`${API_URL}/avatar/tryon-results/${resultId}`, {
+    method: "DELETE",
+    headers: { ...authHeader() },
+  });
+  return res.json();
+};
+
+export const generate3dFromSavedUrl = async (tryonUrl) => {
+  const res = await fetch(`${API_URL}/avatar/generate-3d`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ tryonUrl }),
+  });
+  
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Server error (${res.status}): ${text}`);
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid JSON response: ${text.slice(0, 200)}`);
+  }
+};

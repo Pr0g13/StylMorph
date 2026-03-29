@@ -227,6 +227,7 @@ def extract_measurements(obj_path, height_cm):
     # Horizontal reach of arm beyond torso half-width (torso ~26% of height)
     torso_half = 0.13 * height_cm  # half of ~26% width
     if shoulder_pts_list:
+        all_shoulder = np.vstack(shoulder_pts_list)
         arm_x_max = float(all_shoulder[:, 0].max())
         arm_x_min = float(all_shoulder[:, 0].min())
         reach = max(arm_x_max - torso_half, abs(arm_x_min) - torso_half, 0)
