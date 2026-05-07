@@ -1,1 +1,26 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+  
+  .glass-panel-hover {
+    @apply hover:bg-gray-800/50 hover:border-indigo-500/50 transition-all duration-300;
+  }
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-3d {
+  transform-style: preserve-3d;
+}
+
+.tilt-effect {
+  transition: transform 0.3s ease-out;
+}
+.tilt-effect:hover {
+  transform: rotateX(5deg) rotateY(-5deg) scale3d(1.02, 1.02, 1.02);
+}

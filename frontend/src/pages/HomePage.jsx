@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';  
 import { Camera, Sparkles, Zap, ShoppingBag, User, X, Mail, Lock, ArrowRight, Play } from 'lucide-react';
+import Hero3DAnimation from '../components/Hero3DAnimation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const StylMorphHomepage = () => {
   const [showLogin, setShowLogin] = useState(false);
@@ -86,9 +88,9 @@ const handleSignup = async () => {
   }
 };
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen bg-transparent text-white">
       {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-black/90 backdrop-blur-xl border-b border-white/10' : 'bg-transparent'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'glass-panel border-x-0 border-t-0' : 'bg-transparent'}`}>
         <nav className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded flex items-center justify-center">
@@ -126,21 +128,21 @@ const handleSignup = async () => {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-32 text-center">
-          <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full mb-8">
+          <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration: 0.5}} className="inline-flex items-center space-x-2 px-4 py-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full mb-8">
             <Zap className="w-4 h-4 text-indigo-400" />
             <span className="text-sm text-gray-300">AI-Powered Virtual Fitting Room</span>
-          </div>
+          </motion.div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight">
+          <motion.h1 initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration: 0.5, delay: 0.1}} className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight">
             <span className="block">Experience Fashion</span>
             <span className="block bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               Before You Buy
             </span>
-          </h1>
+          </motion.h1>
 
-          <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+          <motion.p initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration: 0.5, delay: 0.2}} className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
             Create your personalized 3D avatar with precise body measurements and visualize how any garment fits—powered by advanced computer vision and AI.
-          </p>
+          </motion.p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <button
@@ -159,67 +161,16 @@ const handleSignup = async () => {
 
           {/* 3D Avatar Showcase */}
           <div className="relative max-w-5xl mx-auto">
-            <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-gray-900 to-black shadow-2xl">
+            <div className="relative rounded-2xl overflow-hidden glass-panel transform-3d shadow-[0_0_50px_rgba(99,102,241,0.2)]">
               {/* Simulated Interface */}
-              <div className="aspect-video bg-gradient-to-br from-indigo-950/50 to-purple-950/50 flex items-center justify-center relative">
-                {/* 3D Model Placeholder */}
-                <div className="relative w-64 h-96">
-                  {/* Scanning Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent animate-pulse" />
-                  
-                  {/* Human Silhouette */}
-                  <svg viewBox="0 0 200 400" className="w-full h-full filter drop-shadow-2xl">
-                    <defs>
-                      <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.8" />
-                        <stop offset="100%" stopColor="#a855f7" stopOpacity="0.8" />
-                      </linearGradient>
-                      <filter id="glow">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                        <feMerge>
-                          <feMergeNode in="coloredBlur"/>
-                          <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    
-                    {/* Head */}
-                    <ellipse cx="100" cy="50" rx="25" ry="30" fill="url(#bodyGrad)" filter="url(#glow)" />
-                    
-                    {/* Torso */}
-                    <path d="M 75 80 Q 100 75 125 80 L 120 200 Q 100 205 80 200 Z" fill="url(#bodyGrad)" filter="url(#glow)" />
-                    
-                    {/* Arms */}
-                    <line x1="75" y1="100" x2="50" y2="180" stroke="url(#bodyGrad)" strokeWidth="12" strokeLinecap="round" filter="url(#glow)" />
-                    <line x1="125" y1="100" x2="150" y2="180" stroke="url(#bodyGrad)" strokeWidth="12" strokeLinecap="round" filter="url(#glow)" />
-                    
-                    {/* Legs */}
-                    <line x1="85" y1="200" x2="85" y2="350" stroke="url(#bodyGrad)" strokeWidth="16" strokeLinecap="round" filter="url(#glow)" />
-                    <line x1="115" y1="200" x2="115" y2="350" stroke="url(#bodyGrad)" strokeWidth="16" strokeLinecap="round" filter="url(#glow)" />
-                    
-                    {/* Measurement Lines */}
-                    <line x1="60" y1="120" x2="140" y2="120" stroke="#22d3ee" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
-                    <line x1="60" y1="180" x2="140" y2="180" stroke="#22d3ee" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
-                    <line x1="70" y1="200" x2="130" y2="200" stroke="#22d3ee" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
-                  </svg>
-
-                  {/* Measurement Labels */}
-                  <div className="absolute top-1/4 -left-16 text-xs text-cyan-400 font-mono">
-                    <div className="bg-black/50 backdrop-blur-sm px-2 py-1 rounded">Chest: 38"</div>
-                  </div>
-                  <div className="absolute top-1/2 -right-16 text-xs text-cyan-400 font-mono">
-                    <div className="bg-black/50 backdrop-blur-sm px-2 py-1 rounded">Waist: 32"</div>
-                  </div>
-                  <div className="absolute bottom-1/4 -left-16 text-xs text-cyan-400 font-mono">
-                    <div className="bg-black/50 backdrop-blur-sm px-2 py-1 rounded">Inseam: 32"</div>
-                  </div>
-                </div>
+              <div className="aspect-video flex items-center justify-center relative">
+                <Hero3DAnimation />
 
                 {/* Corner Accents */}
-                <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-indigo-500" />
-                <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-indigo-500" />
-                <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-indigo-500" />
-                <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-indigo-500" />
+                <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-indigo-500/50" />
+                <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-indigo-500/50" />
+                <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-indigo-500/50" />
+                <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-indigo-500/50" />
               </div>
             </div>
 
@@ -243,7 +194,7 @@ const handleSignup = async () => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="relative py-32 bg-gradient-to-b from-black to-gray-950">
+      <section id="features" className="relative py-32 bg-transparent">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Precision Meets Innovation</h2>
@@ -272,7 +223,7 @@ const handleSignup = async () => {
             ].map((feature, idx) => (
               <div
                 key={idx}
-                className="group relative p-8 bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 hover:border-indigo-600/50 transition-all duration-500 overflow-hidden"
+                className="perspective-1000 group relative p-8 glass-panel glass-panel-hover tilt-effect rounded-2xl overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative">
@@ -289,7 +240,7 @@ const handleSignup = async () => {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-32 bg-gradient-to-br from-indigo-950 to-purple-950">
+      <section className="relative py-32 bg-transparent glass-panel border-x-0 border-b-0 backdrop-blur-2xl">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
             Ready to Transform Your Shopping Experience?
@@ -307,9 +258,10 @@ const handleSignup = async () => {
       </section>
 
       {/* Login Modal */}
+      <AnimatePresence>
       {showLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
-          <div className="relative bg-gray-950 p-8 md:p-10 rounded-2xl w-full max-w-md border border-gray-800 shadow-2xl">
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
+          <motion.div initial={{scale:0.95, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}} className="relative bg-gray-950 p-8 md:p-10 rounded-2xl w-full max-w-md border border-gray-800 shadow-2xl">
             <button
               onClick={() => setShowLogin(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -374,14 +326,16 @@ const handleSignup = async () => {
                 </button>
               </p>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Signup Modal */}
+      <AnimatePresence>
       {showSignup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
-          <div className="relative bg-gray-950 p-8 md:p-10 rounded-2xl w-full max-w-md border border-gray-800 shadow-2xl">
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
+          <motion.div initial={{scale:0.95, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}} className="relative bg-gray-950 p-8 md:p-10 rounded-2xl w-full max-w-md border border-gray-800 shadow-2xl">
             <button
               onClick={() => setShowSignup(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -460,9 +414,10 @@ const handleSignup = async () => {
                 </button>
               </p>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 };

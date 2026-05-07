@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import * as api from '../services/api';
 import RealisticAvatar3D from '../components/RealisticAvatar3D';
+import ReactMarkdown from 'react-markdown';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ══════════════════════════════════════════════════════════════════════════════
 const Dashboard = () => {
@@ -224,11 +226,11 @@ const Dashboard = () => {
 
 
   return (
-    <div className="flex h-screen bg-black text-white overflow-hidden">
+    <div className="flex h-screen bg-transparent text-white overflow-hidden perspective-1000">
 
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <div className={`fixed md:relative transition-all duration-500 ${sidebarOpen ? 'w-72' : 'w-20'} bg-gradient-to-b from-gray-950 to-black border-r border-gray-800 z-40 h-full overflow-y-auto`}>
-        <div className="flex items-center justify-between p-6 sticky top-0 bg-gradient-to-r from-gray-950 to-black">
+      <div className={`fixed md:relative transition-all duration-500 ${sidebarOpen ? 'w-72' : 'w-20'} glass-panel border-r border-white/10 rounded-none z-40 h-full overflow-y-auto`}>
+        <div className="flex items-center justify-between p-6 sticky top-0 bg-transparent">
           {sidebarOpen && (
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded flex items-center justify-center shadow-lg shadow-indigo-600/50">
@@ -276,7 +278,7 @@ const Dashboard = () => {
       <div className="flex-1 overflow-auto">
 
         {/* Header */}
-        <header className="sticky top-0 bg-gradient-to-r from-gray-950 to-black border-b border-gray-800 backdrop-blur-xl px-8 py-4 flex items-center justify-between z-30 shadow-lg">
+        <header className="sticky top-0 glass-panel border-x-0 border-t-0 rounded-none px-8 py-4 flex items-center justify-between z-30 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
             {activeTab === 'home' && '📊 Dashboard'}
             {activeTab === 'avatar' && '🎨 Build Your Avatar'}
@@ -292,12 +294,21 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* ── HOME TAB ──────────────────────────────────────────────────────── */}
-        {activeTab === 'home' && (
-          <div className="p-8 space-y-8 animate-fade-in">
+        {/* ── TABS WRAPPER ──────────────────────────────────────────────────── */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
+            {/* ── HOME TAB ──────────────────────────────────────────────────────── */}
+            {activeTab === 'home' && (
+              <div className="p-8 space-y-8">
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 to-purple-600/30 rounded-2xl blur-3xl group-hover:blur-3xl transition-all duration-500" />
-              <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-indigo-600/50 transition-all duration-300">
+              <div className="relative glass-panel glass-panel-hover transform-3d tilt-effect rounded-2xl p-8">
                 {avatar ? (
                   <div>
                     <h2 className="text-2xl font-bold mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -377,7 +388,7 @@ const Dashboard = () => {
               ].map((s, i) => (
                 <div key={i} className="relative group">
                   <div className={`absolute inset-0 bg-gradient-to-br ${s.color} rounded-xl blur-xl group-hover:blur-2xl transition-all duration-500`} />
-                  <div className="relative bg-gray-900 border border-gray-800 rounded-xl p-6 text-center group-hover:border-indigo-600/50 transition-all duration-300">
+                  <div className="relative glass-panel glass-panel-hover transform-3d tilt-effect rounded-xl p-6 text-center">
                     <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">{s.value}</div>
                     <div className="text-sm text-gray-400 mt-2">{s.label}</div>
                   </div>
@@ -387,15 +398,14 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* ── AVATAR TAB ────────────────────────────────────────────────────── */}
-        {activeTab === 'avatar' && (
-          <div className="p-8 animate-fade-in">
+            {activeTab === 'avatar' && (
+              <div className="p-8">
             <div className="grid lg:grid-cols-2 gap-8">
 
               <div className="space-y-6 lg:col-span-2">
                 <div className="relative group max-w-2xl mx-auto">
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-pink-600/30 rounded-2xl blur-3xl transition-all duration-500" />
-                  <div className="relative bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-8 group-hover:border-purple-600/50 transition-all duration-300">
+                  <div className="relative glass-panel glass-panel-hover transform-3d tilt-effect rounded-2xl p-8">
                     <div className="mb-6 text-center">
                       <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
                         <Upload className="w-8 h-8 text-white" />
@@ -460,7 +470,7 @@ const Dashboard = () => {
               <div className="space-y-6">
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                  <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/30 transition-all duration-300">
+                  <div className="relative glass-panel glass-panel-hover transform-3d tilt-effect rounded-2xl p-8">
                     <h3 className="text-2xl font-bold mb-2 flex items-center space-x-2">
                       <Zap className="w-6 h-6 text-indigo-400" />
                       <span>AI Styling Assistant</span>
@@ -583,8 +593,21 @@ const Dashboard = () => {
                           <h4 className="font-bold text-indigo-400 mb-3 flex items-center gap-2">
                             <span>✨</span> AI Recommendation
                           </h4>
-                          <div className="text-sm text-gray-200 leading-relaxed whitespace-pre-line">
-                            {aiResponse}
+                          <div className="text-sm text-gray-200 leading-relaxed markdown-body">
+                            <ReactMarkdown
+                              components={{
+                                p: ({node, ...props}) => <p className="mb-3" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-3 space-y-1" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-3 space-y-1" {...props} />,
+                                li: ({node, ...props}) => <li {...props} />,
+                                h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-2 mt-4 text-indigo-300" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2 mt-4 text-indigo-300" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-md font-bold mb-2 mt-3 text-indigo-300" {...props} />,
+                                strong: ({node, ...props}) => <strong className="font-semibold text-input" style={{ color: 'white' }} {...props} />,
+                              }}
+                            >
+                              {aiResponse}
+                            </ReactMarkdown>
                           </div>
                         </div>
                       )}
@@ -596,9 +619,8 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* ── WEARABLES TAB ─────────────────────────────────────────────────── */}
-        {activeTab === 'wearables' && (
-          <div className="p-8 space-y-8 animate-fade-in">
+            {activeTab === 'wearables' && (
+              <div className="p-8 space-y-8">
             {!avatar ? (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
                 <Camera className="w-16 h-16 mx-auto text-gray-600 mb-4 animate-bounce" />
@@ -610,7 +632,7 @@ const Dashboard = () => {
               <>
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 to-purple-600/30 rounded-2xl blur-3xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                  <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/50 transition-all duration-300">
+                  <div className="relative glass-panel glass-panel-hover transform-3d tilt-effect rounded-2xl p-8">
                     <h3 className="text-2xl font-bold mb-6 flex items-center space-x-2">
                       <Shirt className="w-6 h-6 text-indigo-400" /><span>Add Wearables</span>
                     </h3>
@@ -650,7 +672,7 @@ const Dashboard = () => {
                     <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
                       {avatar.wearables.map((w) => (
                         <div key={w._id} className="relative group">
-                          <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all duration-300">
+                          <div className="relative glass-panel glass-panel-hover transform-3d tilt-effect rounded-2xl overflow-hidden">
                             <div className="aspect-square bg-gray-950 flex items-center justify-center overflow-hidden">
                               <img
                                 src={w.url}
@@ -685,7 +707,7 @@ const Dashboard = () => {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {avatar.tryonResults?.length > 0 ? (
                         avatar.tryonResults.map((res, idx) => (
-                          <div key={`new-${res._id || idx}`} className="relative group rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 group-hover:border-indigo-600/50 transition-all">
+                          <div key={`new-${res._id || idx}`} className="relative group rounded-2xl overflow-hidden glass-panel glass-panel-hover">
                             <img src={res.url} alt={`Try-on ${idx}`} className="w-full h-auto object-cover" />
                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={() => deleteTryon(res._id)} disabled={loading} className="p-2 bg-red-600/90 hover:bg-red-500 rounded-full text-white backdrop-blur-sm shadow-lg">
@@ -703,7 +725,7 @@ const Dashboard = () => {
                         ))
                       ) : (
                         avatar.viewResults?.map((resUrl, idx) => (
-                          <div key={`old-${idx}`} className="relative group rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 group-hover:border-indigo-600/50 transition-all">
+                          <div key={`old-${idx}`} className="relative group rounded-2xl overflow-hidden glass-panel glass-panel-hover">
                             <img src={resUrl} alt={`Try-on ${idx}`} className="w-full h-auto object-cover" />
                           </div>
                         ))
@@ -714,7 +736,7 @@ const Dashboard = () => {
 
                 {avatar.wearables?.length > 0 && (
                   <div className="relative group">
-                    <div className="relative bg-gray-900 border border-green-600/50 rounded-2xl p-8 group-hover:border-green-400/70 transition-all">
+                    <div className="relative glass-panel rounded-2xl p-8 hover:border-green-400/50 transition-all">
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-2xl font-bold mb-1">Ready to Save Your Look?</h3>
@@ -732,9 +754,8 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* ── SAVED SETS TAB ────────────────────────────────────────────────── */}
-        {activeTab === 'saved' && (
-          <div className="p-8 space-y-8 animate-fade-in">
+            {activeTab === 'saved' && (
+              <div className="p-8 space-y-8">
             {!avatar?.savedSets?.length ? (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
                 <Save className="w-16 h-16 mx-auto text-gray-600 mb-4 animate-bounce" />
@@ -746,7 +767,7 @@ const Dashboard = () => {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {avatar.savedSets.map((set) => (
                   <div key={set._id} className="relative group">
-                    <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden group-hover:border-indigo-600/50 transition-all">
+                    <div className="relative glass-panel glass-panel-hover rounded-2xl overflow-hidden">
                       <div className="aspect-video bg-gray-950 grid grid-cols-2 gap-1 p-1 overflow-hidden">
                         {set.wearables.slice(0, 4).map((w, idx) => (
                           <img
@@ -788,7 +809,7 @@ const Dashboard = () => {
 
                       {/* Preview Panel for Saved Set */}
                       {activePreviewSetId === set._id && (
-                        <div className="border-t border-gray-800 p-6 bg-gray-950/50">
+                        <div className="border-t border-white/10 p-6 bg-black/20 backdrop-blur-md">
                           <h5 className="font-semibold mb-3 text-sm text-gray-300">Select Product to Preview Try-on:</h5>
                           <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2">
                             {set.wearables.map((w, idx) => (
@@ -804,34 +825,7 @@ const Dashboard = () => {
                             ))}
                           </div>
                           
-                          {activePreviewProduct && activePreviewSetId === set._id && activePreviewProduct.tryonUrl && (
-                            <div className="mt-6 space-y-4 animate-fade-in">
-                              <h5 className="font-semibold text-indigo-400 flex items-center gap-2"><span>✨</span> Try-On Output</h5>
-                              <div className="rounded-xl overflow-hidden border border-gray-800 bg-black max-w-sm mx-auto">
-                                <img src={activePreviewProduct.tryonUrl} className="w-full h-auto" />
-                              </div>
-                              
-                              <button 
-                                onClick={() => handleGenerate3DFromTryon(activePreviewProduct.tryonUrl)}
-                                disabled={loading}
-                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
-                              >
-                                <span>🧊</span>
-                                <span>{loading ? 'Generating...' : (activePreviewProduct.model3dUrl ? 'Regenerate 3D Model' : 'Generate 3D Model')}</span>
-                              </button>
-                              
-                              {activePreviewProduct.model3dUrl && (
-                                <div className="mt-4 pt-4 border-t border-gray-800 animate-fade-in">
-                                  <h5 className="font-semibold text-purple-400 mb-3 flex items-center gap-2"><span>🧊</span> 3D Result</h5>
-                                  <div className="h-64 rounded-xl overflow-hidden border border-gray-800 bg-black relative">
-                                    <RealisticAvatar3D modelUrl={activePreviewProduct.model3dUrl} showWearable={null} />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {activePreviewProduct && !activePreviewProduct.tryonUrl && (
+                          {activePreviewProduct && activePreviewSetId === set._id && !activePreviewProduct.tryonUrl && (
                             <div className="mt-4 p-4 text-center rounded-lg bg-gray-900 border border-gray-800 animate-fade-in">
                               <p className="text-gray-400 text-sm">No try-on output found for this garment in this set.</p>
                             </div>
@@ -844,11 +838,9 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-        )}
-
-        {/* ── SETTINGS TAB ──────────────────────────────────────────────────── */}
-        {activeTab === 'settings' && (
-          <div className="p-8 space-y-8 animate-fade-in">
+            )}
+            {activeTab === 'settings' && (
+              <div className="p-8 space-y-8">
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 relative group">
                 <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 group-hover:border-indigo-600/30 transition-all space-y-6">
@@ -885,8 +877,94 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-        )}
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
+
+      {/* Full-Screen Preview Modal for Active Product */}
+      <AnimatePresence>
+        {activePreviewProduct && activePreviewProduct.tryonUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col pt-20 pb-8 px-8"
+          >
+            {/* Close button */}
+            <button 
+              onClick={() => setActivePreviewProduct(null)}
+              className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all z-50"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+            
+            <div className="flex-1 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-full min-h-0">
+              {/* Left Side: Try-On Image */}
+              <div className="flex flex-col h-full bg-gray-900/50 rounded-2xl border border-white/10 overflow-hidden relative shadow-2xl">
+                <div className="p-4 border-b border-white/10 bg-black/50 shrink-0">
+                  <h3 className="text-xl font-bold text-indigo-400 flex items-center gap-2"><span>✨</span> Try-On Output</h3>
+                </div>
+                <div className="flex-1 flex items-center justify-center overflow-hidden relative p-4">
+                  <img 
+                    src={activePreviewProduct.tryonUrl} 
+                    alt="Try-on flex-1" 
+                    className="w-full h-full object-contain" 
+                  />
+                </div>
+              </div>
+
+              {/* Right Side: 3D Model or Generation Button */}
+              <div className="flex flex-col h-full bg-gray-900/50 rounded-2xl border border-white/10 overflow-hidden relative shadow-2xl">
+                <div className="p-4 border-b border-white/10 bg-black/50 flex justify-between items-center shrink-0">
+                  <h3 className="text-xl font-bold text-purple-400 flex items-center gap-2"><span>🧊</span> 3D Result</h3>
+                  {!activePreviewProduct.model3dUrl && (
+                    <button 
+                      onClick={() => handleGenerate3DFromTryon(activePreviewProduct.tryonUrl)}
+                      disabled={loading}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>{loading ? 'Generating...' : 'Generate 3D Model'}</span>
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex-1 relative w-full h-full">
+                  {activePreviewProduct.model3dUrl ? (
+                    <div className="w-full h-full absolute inset-0">
+                      <RealisticAvatar3D modelUrl={activePreviewProduct.model3dUrl} showWearable={null} />
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-black/20">
+                      <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4 border border-gray-700 shadow-inner">
+                        <Zap className="w-10 h-10 text-gray-500" />
+                      </div>
+                      <h4 className="text-xl font-semibold text-gray-300 mb-2">Detailed 3D View</h4>
+                      <p className="text-gray-500 max-w-sm">
+                        Click the button above to generate a 360° highly detailed 3D model of this look.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {activePreviewProduct.model3dUrl && (
+                    <div className="absolute top-4 right-4 z-10">
+                      <button 
+                        onClick={() => handleGenerate3DFromTryon(activePreviewProduct.tryonUrl)}
+                        disabled={loading}
+                        className="px-4 py-2 bg-black/60 hover:bg-black/90 border border-white/10 backdrop-blur-md rounded-lg text-xs font-medium transition-all shadow-lg flex items-center gap-2"
+                      >
+                        {loading && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                        {loading ? 'Generating...' : 'Regenerate 3D Model'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         @keyframes fade-in { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
