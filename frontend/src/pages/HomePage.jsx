@@ -213,7 +213,7 @@ const handleSignup = async () => {
               {
                 icon: ShoppingBag,
                 title: 'Universal Compatibility',
-                desc: 'Virtually try on garments from any e-commerce platform. Paste a link and see how it fits your unique body shape.'
+                desc: 'Virtually try on garments from any e-commerce platform. Paste a image and see how it fits your unique body shape.'
               },
               {
                 icon: Zap,

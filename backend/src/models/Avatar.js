@@ -58,7 +58,7 @@ const AvatarSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-AvatarSchema.index({ userId: 1 });
+
 
 AvatarSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
